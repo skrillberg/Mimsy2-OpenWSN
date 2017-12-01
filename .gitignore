@@ -11,6 +11,9 @@ settings
 *.a
 *.pyd
 *.pyc
+*.cproject
+*.settings.xml
+*.launch
 /build
 /images
 /.sconsign.dblite

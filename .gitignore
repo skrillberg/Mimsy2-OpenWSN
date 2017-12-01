@@ -12,7 +12,7 @@ settings
 *.pyd
 *.pyc
 *.cproject
-*.settings.xml
+*language.settings.xml
 *.launch
 /build
 /images

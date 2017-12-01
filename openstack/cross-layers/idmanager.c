@@ -35,7 +35,7 @@ void idmanager_init() {
    idmanager_vars.myPANID.panid[0]     = PANID_DEFINED & 0x00ff;
    idmanager_vars.myPANID.panid[1]     =(PANID_DEFINED & 0xff00)>>8;
 #else
-   idmanager_vars.myPANID.panid[0]     = 0xca;
+   idmanager_vars.myPANID.panid[0]     = 0xcb;
    idmanager_vars.myPANID.panid[1]     = 0xfe;
 #endif
    // myPrefix

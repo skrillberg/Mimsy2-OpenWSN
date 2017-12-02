@@ -10,24 +10,24 @@
 #include "opendefs.h"
 #include "accel_mimsy.h"
 #include "flash_mimsy.h"
-IMUData data;
+//IMUData data;
 
 
 int mote_main(void) {
    
    // initialize
    board_init();
-   //scheduler_init();
-   //openstack_init();
+   scheduler_init();
+   openstack_init();
    
    // indicate
    //init imu TODO: add to board init function
    mimsyIMUInit();
 
-   while(1){
-	   mimsyIMURead6Dof(&data);
+  // while(1){
+	   //mimsyIMURead6Dof(&data);
 
-   }
+ //  }
    
 
    // start

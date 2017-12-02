@@ -1,5 +1,5 @@
 #include "i2c_mimsy.h"
-#include "i2c.h"s
+#include "i2c.h"
 #include "MPU9250_RegisterMap.h"
 #include "flash_mimsy.h" //TODO: mive imu_data type to a new mimsy.h file
 #include "gptimer.h"
@@ -89,11 +89,11 @@ static void android_orient_cb(unsigned char orientation)
 
 
 void mimsyIMUInit(){
-    board_timer_init();
+    //board_timer_init();
     uint8_t readbyte;
     
     
-         i2c_init();
+    //     i2c_init();
     uint8_t address;
     address=0x69;
     

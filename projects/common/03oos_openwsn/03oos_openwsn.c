@@ -10,7 +10,7 @@
 #include "opendefs.h"
 #include "accel_mimsy.h"
 #include "flash_mimsy.h"
-//IMUData data;
+IMUData data;
 
 
 int mote_main(void) {
@@ -23,7 +23,8 @@ int mote_main(void) {
    // indicate
    //init imu TODO: add to board init function
    mimsyIMUInit();
-
+   mimsyIMURead6Dof(&data);
+   mimsyIMURead6Dof(&data);
   // while(1){
 	   //mimsyIMURead6Dof(&data);
 

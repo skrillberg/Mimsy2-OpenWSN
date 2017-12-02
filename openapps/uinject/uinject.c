@@ -1,3 +1,5 @@
+#include "accel_mimsy.h"
+#include "flash_mimsy.h"
 #include "opendefs.h"
 #include "uinject.h"
 #include "openqueue.h"
@@ -16,6 +18,8 @@ static const uint8_t uinject_dst_addr[]   = {
    0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
 }; 
+
+IMUData data;
 
 //=========================== prototypes ======================================
 
@@ -108,14 +112,15 @@ void uinject_task_cb() {
    pkt->l4_sourcePortORicmpv6Type     = WKP_UDP_INJECT;
    pkt->l3_destinationAdd.type        = ADDR_128B;
    memcpy(&pkt->l3_destinationAdd.addr_128b[0],uinject_dst_addr,16);
-   
+   mimsyIMURead6Dof(&data);
+
    // add payload
    packetfunctions_reserveHeaderSize(pkt,sizeof(uinject_payload)-1);
    memcpy(&pkt->payload[0],uinject_payload,sizeof(uinject_payload)-1);
    
    packetfunctions_reserveHeaderSize(pkt,sizeof(uint16_t));
-   pkt->payload[1] = (uint8_t)((uinject_vars.counter & 0xff00)>>8);
-   pkt->payload[0] = (uint8_t)(uinject_vars.counter & 0x00ff);
+   pkt->payload[1] = (uint8_t)((data.signedfields.accelX & 0xff00)>>8);
+   pkt->payload[0] = (uint8_t)(data.signedfields.accelX & 0x00ff);
    uinject_vars.counter++;
    
    packetfunctions_reserveHeaderSize(pkt,sizeof(asn_t));

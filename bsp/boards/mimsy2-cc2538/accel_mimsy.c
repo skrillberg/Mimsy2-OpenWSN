@@ -39,8 +39,8 @@ struct platform_data_s {
 
 static struct platform_data_s gyro_pdata = {
     .orientation = { 1, 0, 0,
-                     0, 1, 0,
-                     0, 0, 1}
+                     0, -1, 0,
+                     0, 0, -1}
 };
 struct rx_s {
     unsigned char header[3];
@@ -62,8 +62,13 @@ struct hal_s {
     struct rx_s rx;
 };
 static struct hal_s hal = {0};
+static long alt_inv_q29_mult(long a, long b);
+static long alt_inv_q30_mult(long a, long b);
+static void alt_inv_q_mult(const long *q1, const long *q2, long *qProd);
+void alt_inv_q_invert(const long *q, long *qInverted);
 
-extern unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx);
+//unsigned short alt_inv_orientation_matrix_to_scalar(const signed char *mtx);
+
 
 //functions ####################################################################
 //TODO: add an imu init function
@@ -191,7 +196,7 @@ void mimsyIMURead6Dof( IMUData *data){
       (*data).fields.timestamp= TimerValueGet(GPTIMER2_BASE, GPTIMER_A);
 }   
 
-static unsigned short inv_row_2_scale(const signed char *row)
+static unsigned short alt_inv_row_2_scale(const signed char *row)
 {
     unsigned short b;
 
@@ -221,7 +226,7 @@ static unsigned short inv_row_2_scale(const signed char *row)
 * bit number 8 being the sign. In binary the identity matrix would therefor be:
 * 010_001_000 or 0x88 in hex.
 */
-unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx)
+unsigned short alt_inv_orientation_matrix_to_scalar(const signed char *mtx)
 {
 
     unsigned short scalar;
@@ -235,9 +240,9 @@ unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx)
        ZYX  000_001_010
      */
 
-    scalar = inv_row_2_scale(mtx);
-    scalar |= inv_row_2_scale(mtx + 3) << 3;
-    scalar |= inv_row_2_scale(mtx + 6) << 6;
+    scalar = alt_inv_row_2_scale(mtx);
+    scalar |= alt_inv_row_2_scale(mtx + 3) << 3;
+    scalar |= alt_inv_row_2_scale(mtx + 6) << 6;
 
 
     return scalar;
@@ -246,7 +251,7 @@ unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx)
 void mimsyDmpBegin(){
       dmp_load_motion_driver_firmware();
     dmp_set_orientation(
-       inv_orientation_matrix_to_scalar(gyro_pdata.orientation));
+       alt_inv_orientation_matrix_to_scalar(gyro_pdata.orientation));
           dmp_register_tap_cb(tap_cb);
     dmp_register_android_orient_cb(android_orient_cb);
     
@@ -259,3 +264,154 @@ void mimsyDmpBegin(){
     mpu_set_dmp_state(1);
     hal.dmp_on = 1;
 }
+
+/** Performs a multiply and shift by 29. These are good functions to write in assembly on
+ * with devices with small memory where you want to get rid of the long long which some
+ * assemblers don't handle well
+ * @param[in] a
+ * @param[in] b
+ * @return ((long long)a*b)>>29
+*/
+static long alt_inv_q29_mult(long a, long b)
+{
+#ifdef EMPL_NO_64BIT
+    long result;
+    result = (long)((float)a * b / (1L << 29));
+    return result;
+#else
+    long long temp;
+    long result;
+    temp = (long long)a * b;
+    result = (long)(temp >> 29);
+    return result;
+#endif
+}
+
+/** Performs a multiply and shift by 30. These are good functions to write in assembly on
+ * with devices with small memory where you want to get rid of the long long which some
+ * assemblers don't handle well
+ * @param[in] a
+ * @param[in] b
+ * @return ((long long)a*b)>>30
+*/
+static long alt_inv_q30_mult(long a, long b)
+{
+#ifdef EMPL_NO_64BIT
+    long result;
+    result = (long)((float)a * b / (1L << 30));
+    return result;
+#else
+    long long temp;
+    long result;
+    temp = (long long)a * b;
+    result = (long)(temp >> 30);
+    return result;
+#endif
+}
+
+/** Performs a fixed point quaternion multiply.
+* @param[in] q1 First Quaternion Multicand, length 4. 1.0 scaled
+*            to 2^30
+* @param[in] q2 Second Quaternion Multicand, length 4. 1.0 scaled
+*            to 2^30
+* @param[out] qProd Product after quaternion multiply. Length 4.
+*             1.0 scaled to 2^30.
+*/
+static void alt_inv_q_mult(const long *q1, const long *q2, long *qProd)
+{
+    //INVENSENSE_FUNC_START;
+    qProd[0] = alt_inv_q30_mult(q1[0], q2[0]) - alt_inv_q30_mult(q1[1], q2[1]) -
+               alt_inv_q30_mult(q1[2], q2[2]) - alt_inv_q30_mult(q1[3], q2[3]);
+
+    qProd[1] = alt_inv_q30_mult(q1[0], q2[1]) + alt_inv_q30_mult(q1[1], q2[0]) +
+               alt_inv_q30_mult(q1[2], q2[3]) - alt_inv_q30_mult(q1[3], q2[2]);
+
+    qProd[2] = alt_inv_q30_mult(q1[0], q2[2]) - alt_inv_q30_mult(q1[1], q2[3]) +
+               alt_inv_q30_mult(q1[2], q2[0]) + alt_inv_q30_mult(q1[3], q2[1]);
+
+    qProd[3] = alt_inv_q30_mult(q1[0], q2[3]) + alt_inv_q30_mult(q1[1], q2[2]) -
+               alt_inv_q30_mult(q1[2], q2[1]) + alt_inv_q30_mult(q1[3], q2[0]);
+}
+
+/** Rotates a 3-element vector by Rotation defined by Q
+*/
+void alt_inv_q_rotate(const long *q, const long *in, long *out)
+{
+    long q_temp1[4], q_temp2[4];
+    long in4[4], out4[4];
+
+    // Fixme optimize
+    in4[0] = 0;
+    memcpy(&in4[1], in, 3 * sizeof(long));
+    alt_inv_q_mult(q, in4, q_temp1);
+    alt_inv_q_invert(q, q_temp2);
+    alt_inv_q_mult(q_temp1, q_temp2, out4);
+    memcpy(out, &out4[1], 3 * sizeof(long));
+}
+
+void alt_inv_q_invert(const long *q, long *qInverted)
+{
+    //INVENSENSE_FUNC_START;
+    qInverted[0] = q[0];
+    qInverted[1] = -q[1];
+    qInverted[2] = -q[2];
+    qInverted[3] = -q[3];
+}
+
+/**
+ * Converts a quaternion to a rotation matrix.
+ * @param[in] quat 4-element quaternion in fixed point. One is 2^30.
+ * @param[out] rot Rotation matrix in fixed point. One is 2^30. The
+ *             First 3 elements of the rotation matrix, represent
+ *             the first row of the matrix. Rotation matrix multiplied
+ *             by a 3 element column vector transform a vector from Body
+ *             to World.
+ */
+void alt_inv_quaternion_to_rotation(const long *quat, long *rot)
+{
+    rot[0] =
+        alt_inv_q29_mult(quat[1], quat[1]) + alt_inv_q29_mult(quat[0],
+                quat[0]) -
+        1073741824L;
+    rot[1] =
+        alt_inv_q29_mult(quat[1], quat[2]) - alt_inv_q29_mult(quat[3], quat[0]);
+    rot[2] =
+        alt_inv_q29_mult(quat[1], quat[3]) + alt_inv_q29_mult(quat[2], quat[0]);
+    rot[3] =
+        alt_inv_q29_mult(quat[1], quat[2]) + alt_inv_q29_mult(quat[3], quat[0]);
+    rot[4] =
+        alt_inv_q29_mult(quat[2], quat[2]) + alt_inv_q29_mult(quat[0],
+                quat[0]) -
+        1073741824L;
+    rot[5] =
+        alt_inv_q29_mult(quat[2], quat[3]) - alt_inv_q29_mult(quat[1], quat[0]);
+    rot[6] =
+        alt_inv_q29_mult(quat[1], quat[3]) - alt_inv_q29_mult(quat[2], quat[0]);
+    rot[7] =
+        alt_inv_q29_mult(quat[2], quat[3]) + alt_inv_q29_mult(quat[1], quat[0]);
+    rot[8] =
+        alt_inv_q29_mult(quat[3], quat[3]) + alt_inv_q29_mult(quat[0],
+                quat[0]) -
+        1073741824L;
+}
+
+void alt_mlMatrixVectorMult(long matrix[9], const long vecIn[3], long *vecOut)  {
+        // matrix format
+        //  [ 0  3  6;
+        //    1  4  7;
+        //    2  5  8]
+
+        // vector format:  [0  1  2]^T;
+        int i, j;
+        long temp;
+
+        for (i=0; i<3; i++)	{
+                temp = 0;
+                for (j=0; j<3; j++)  {
+                        temp += alt_inv_q30_mult(matrix[i+j*3], vecIn[j]);
+                }
+                vecOut[i] = temp;
+        }
+}
+
+

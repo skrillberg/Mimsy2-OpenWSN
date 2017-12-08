@@ -15,7 +15,9 @@
 #include "inv_mpu_dmp_motion_driver.h"
 IMUData data;
 
+long vec[3];
 
+//extern void inv_q_rotate(const long *q, const long *in, long *out);
 int mote_main(void) {
    
    // initialize
@@ -43,15 +45,22 @@ int mote_main(void) {
    short gyro[3];
    short accel[3];
    long quat[4];
-   long rot[3];
+   //long rot[3];
    long timestamp2;
    unsigned char more;
    short sensors=INV_XYZ_GYRO | INV_WXYZ_QUAT|INV_XYZ_ACCEL;
-
-
+   long in[3] = {0,0,0x40000000};
+   float fvec[3];
+   long rot[9];
    int cnt=0;
    while(1){
 	      dmp_read_fifo(gyro, accel, quat,&timestamp2, &sensors, &more);
+	      alt_inv_q_rotate(quat,in,vec);
+	      fvec[0]=(float)vec[0]/(float)0x40000000;
+	      fvec[1]=(float)vec[1]/(float)0x40000000;
+	      fvec[2]=(float)vec[2]/(float)0x40000000;
+	      //alt_inv_quaternion_to_rotation(quat,rot);
+	      //alt_mlMatrixVectorMult(rot, in, vec);
 	     // mpu_get_accel_reg(xl,&debugx);
 	   cnt++;
 	   if(cnt==5000000){

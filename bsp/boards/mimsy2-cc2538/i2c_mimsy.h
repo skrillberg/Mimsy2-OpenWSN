@@ -39,6 +39,7 @@ uint8_t i2c_slave_present(uint8_t bus_num,uint8_t slave_address);
 
 
 void delay_ms(uint32_t delay);
+void get_ms(uint32_t *timestamp);
 
 // interrupt handlers
 void isr_i2c_tx(uint8_t bus_num);

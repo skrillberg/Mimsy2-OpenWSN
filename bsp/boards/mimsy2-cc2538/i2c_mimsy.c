@@ -85,7 +85,7 @@ bool board_timer_expired(uint32_t future) {
 }
 */
 
-void delay_ms(uint32_t delay){
+extern void delay_ms(uint32_t delay){
   uint32_t current=board_timer_get();
   uint32_t timeout=(current*32+delay*1000*32)/32;
   if (timeout>current){ //executes of timeout time is bigger than current time

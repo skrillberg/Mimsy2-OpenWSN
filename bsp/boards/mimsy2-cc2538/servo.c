@@ -27,14 +27,14 @@
 float servo_scale;
 
 //refresh width and pulse widths are in ms
-void servo_init(uint32_t timer,int refresh_rate,float upper_lim,float lower_lim){
+void servo_init(uint32_t timer,int refresh_rate,float center){
 
 	 uint32_t pwmTimerClkEnable;
 	 uint32_t pwmTimerBase;
 	 uint32_t freqCnt=SysCtrlClockGet()*refresh_rate/1000; //number of ticks in one period is period * clock rate
 	 uint8_t pre_cnt=(freqCnt>>16)&0xFF;	//prescaler count should have the upper bits 16 to 23 of the count
 	 uint16_t timer_cnt=freqCnt & 0xFFFF; 	//lower 16 bits of count value
-	 float neutral_pulse_width = (upper_lim + lower_lim) / 2;	//pulse width for neutral pos
+	 float neutral_pulse_width = center;	//pulse width for neutral pos
 
 	 //calc pulse widths for servo neutral
 

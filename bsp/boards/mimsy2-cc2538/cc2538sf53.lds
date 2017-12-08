@@ -45,7 +45,7 @@ SECTIONS
     .ARM.exidx :
     {
         *(.ARM.exidx*)
-    } > FLASH
+    } > SRAM
 
     .bss :
     {

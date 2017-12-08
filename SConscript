@@ -216,6 +216,8 @@ elif env['toolchain']=='armgcc':
         env.Append(CCFLAGS       = '-mthumb')
         env.Append(CCFLAGS       = '-g3')
         env.Append(CCFLAGS       = '-Wstrict-prototypes')
+        #if env['board'] == "mimsy2-cc2538":
+            # env.Append(CCFLAGS       = '-lm')  #added to hopefully prevent a linker overlap between .ARM.exidx and .data
         if env['revision'] == "A1":
             env.Append(CCFLAGS   = '-DREVA1=1')
             
@@ -228,10 +230,18 @@ elif env['toolchain']=='armgcc':
         # linker
         env.Append(LINKFLAGS     = '-Tbsp/boards/'+env['board']+'/' + linker_file)
         env.Append(LINKFLAGS     = '-nostartfiles')
+        #if env['board'] == "mimsy2-cc2538":
+            #env.Replace(LIBLINKPREFIX     = 'lib')
+            #env.Replace(LIBLINKSUFFIX     = '.a')
+            #env.Replace(LIBS     = 'm')
+            #env.Append(LIBLINKSUFFIXES='.a')
+            #env.Append(LIBPATH='#C:\Program Files (x86)\GNU Tools ARM Embedded\5.4 2016q3\arm-none-eabi\lib\armv7-m')
         env.Append(LINKFLAGS     = '-Wl,-Map,${TARGET.base}.map')
         env.Append(LINKFLAGS     = '-mcpu=cortex-m3')
         env.Append(LINKFLAGS     = '-mthumb')
         env.Append(LINKFLAGS     = '-g3')
+
+
         if env['revision'] == "A1":
             env.Append(LINKFLAGS   = '-DREVA1=1')
 		
@@ -777,7 +787,7 @@ def buildLibs(projectDir):
         '00std': [                                                              ],
         '01bsp': [                                                      'libbsp'],
         '02drv': [                             'libkernel','libdrivers','libbsp'],
-        '03oos': ['libopenstack','libopenapps','libopenstack','libkernel','libdrivers','libbsp'], # this order needed for mspgcc
+        '03oos': ['libm','libopenstack','libopenapps','libopenstack','libkernel','libdrivers','libbsp'], # this order needed for mspgcc
     }
     
     returnVal = None
@@ -864,6 +874,7 @@ def project_finder(localEnv):
                 source  = source,
                 LIBS    = libs,
             )
+
             targetAction = localEnv.PostBuildExtras(exe)
             
             Alias(targetName, [targetAction])
@@ -1052,3 +1063,6 @@ buildEnv.SConscript(
     exports        = {'env': buildEnv},
     variant_dir    = projectsVarDir,
 )
+
+buildEnv.Append(LIBPATH = '#C:\Program Files (x86)\GNU Tools ARM Embedded\5.4 2016q3\arm-none-eabi\lib\armv7-m')
+buildEnv.Append(LIBS = "libm")

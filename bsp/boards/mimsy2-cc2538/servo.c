@@ -84,6 +84,12 @@ void servo_init(uint32_t timer,int refresh_rate,float center){
 
 	  TimerControlLevel(pwmTimerBase,GPTIMER_A,true); //active high pwm
 
+	  TimerPrescaleSet(pwmTimerBase,GPTIMER_B,pre_cnt);		//load upper 8 bits of timer count
+	  TimerLoadSet(pwmTimerBase,GPTIMER_B,timer_cnt); 	//load lower 16 bits of timer count
+
+	  TimerControlLevel(pwmTimerBase,GPTIMER_B,true); //active high pwm
+
+
 	  IOCPinConfigPeriphOutput(GPIO_D_BASE,GPIO_PIN_1,IOC_MUX_OUT_SEL_GPT3_ICP1); //maps pwm1 output to pin1
 	  IOCPinConfigPeriphOutput(GPIO_D_BASE,GPIO_PIN_2,IOC_MUX_OUT_SEL_GPT3_ICP2);
 
@@ -93,24 +99,35 @@ void servo_init(uint32_t timer,int refresh_rate,float center){
 
 	  TimerEnable(pwmTimerBase,GPTIMER_A);
 
+	  TimerMatchSet(pwmTimerBase,GPTIMER_B,match_lower);
+	  TimerPrescaleMatchSet(pwmTimerBase,GPTIMER_B,match_upper);
+
+	  TimerEnable(pwmTimerBase,GPTIMER_B);
+
 	  GPIOPinTypeTimer(GPIO_D_BASE,GPIO_PIN_1); //enables hw muxing of pin outputs
 
 	    IOCPadConfigSet(GPIO_D_BASE,GPIO_PIN_1,IOC_OVERRIDE_OE|IOC_OVERRIDE_PUE); // enables pins as outputs, necessary for this code to work correctly
 
+		  GPIOPinTypeTimer(GPIO_D_BASE,GPIO_PIN_2); //enables hw muxing of pin outputs
+		    IOCPadConfigSet(GPIO_D_BASE,GPIO_PIN_2,IOC_OVERRIDE_OE|IOC_OVERRIDE_PUE); // enables pins as outputs, necessary for this code to work correctly
 
 
 }
 
 //time based servo controller. input is 1-2 ms
-void servo_rotate_time(float pulse_width){
+void servo_rotate_time(float pulse_width,int servo){
 	 //calc pulse widths for servo neutral
 
 	 uint32_t neutral_match_count = pulse_width / 1000 * SysCtrlClockGet(); 	//match set
 	 uint16_t match_lower = neutral_match_count & 0xFFFF;
 	 uint8_t match_upper = (neutral_match_count >> 16) & 0xFF;
-
+	 if (servo==0){
 	  TimerMatchSet(GPTIMER3_BASE,GPTIMER_A,match_lower);
 	  TimerPrescaleMatchSet(GPTIMER3_BASE,GPTIMER_A,match_upper);
-
+	 }
+	 else if(servo==1){
+		  TimerMatchSet(GPTIMER3_BASE,GPTIMER_B,match_lower);
+		  TimerPrescaleMatchSet(GPTIMER3_BASE,GPTIMER_B,match_upper);
+	 }
 }
 

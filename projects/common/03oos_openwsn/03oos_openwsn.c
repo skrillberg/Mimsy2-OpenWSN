@@ -13,6 +13,7 @@
 #include "servo.c"
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
+#include "uart_mimsy.h"
 IMUData data;
 
 long vec[3];
@@ -25,6 +26,7 @@ int mote_main(void) {
 //   scheduler_init();
 //   openstack_init();
    
+   uartMimsyInit();
    // indicate
    //init imu TODO: add to board init function
    mimsyIMUInit();
@@ -53,22 +55,34 @@ int mote_main(void) {
    float fvec[3];
    long rot[9];
    int cnt=0;
+   float mag;
+   float servo_time;
    while(1){
 	      dmp_read_fifo(gyro, accel, quat,&timestamp2, &sensors, &more);
 	      alt_inv_q_rotate(quat,in,vec);
 	      fvec[0]=(float)vec[0]/(float)0x40000000;
 	      fvec[1]=(float)vec[1]/(float)0x40000000;
 	      fvec[2]=(float)vec[2]/(float)0x40000000;
+
 	      //alt_inv_quaternion_to_rotation(quat,rot);
 	      //alt_mlMatrixVectorMult(rot, in, vec);
 	     // mpu_get_accel_reg(xl,&debugx);
 	   cnt++;
-	   if(cnt==5000000){
-		   servo_rotate_time(0.9);
+	   if(cnt%10==0){
+		      mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],accel[0],accel[1],accel[2]);
+
 	   }
-	   if(cnt==10000000){
+	   if(cnt%5==0){
+		   mag = fvec[0]*fvec[0]+fvec[1]*fvec[1];
+		   servo_time = 1+mag;
+		   servo_rotate_time(servo_time,0);
+		   servo_rotate_time(servo_time,1);
+
+
+	   }
+	   if(cnt==10000){
 		   cnt=0;
-		   servo_rotate_time(2);
+		   //servo_rotate_time(2);
 	   }
    }
 

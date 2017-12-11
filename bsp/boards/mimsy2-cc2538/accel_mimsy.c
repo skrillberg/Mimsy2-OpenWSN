@@ -255,12 +255,11 @@ void mimsyDmpBegin(){
           dmp_register_tap_cb(tap_cb);
     dmp_register_android_orient_cb(android_orient_cb);
     
-        hal.dmp_features = DMP_FEATURE_6X_LP_QUAT | DMP_FEATURE_TAP |
-        DMP_FEATURE_ANDROID_ORIENT | DMP_FEATURE_SEND_RAW_ACCEL | DMP_FEATURE_SEND_CAL_GYRO |
-        DMP_FEATURE_GYRO_CAL;
+        hal.dmp_features = DMP_FEATURE_6X_LP_QUAT
+        		| DMP_FEATURE_SEND_RAW_ACCEL  | DMP_FEATURE_GYRO_CAL |DMP_FEATURE_SEND_CAL_GYRO;
     dmp_enable_feature(hal.dmp_features);
     dmp_set_fifo_rate(DEFAULT_MPU_HZ);
-    dmp_enable_6x_lp_quat(1);
+    //dmp_enable_6x_lp_quat(1);
     mpu_set_dmp_state(1);
     hal.dmp_on = 1;
 }

@@ -39,8 +39,9 @@ int mote_main(void) {
    
    servo_init(3,20,1.45);
 
-   mpu_set_sensors(INV_XYZ_ACCEL|INV_XYZ_GYRO|INV_XYZ_COMPASS); //turn on sensor
+   mpu_set_sensors(INV_XYZ_ACCEL|INV_XYZ_GYRO); //turn on sensor
    mpu_set_accel_fsr(16); //set fsr for accel
+   mpu_set_gyro_fsr(2000); //set fsr for accel
 
    mimsyDmpBegin();
 
@@ -69,7 +70,7 @@ int mote_main(void) {
 	     // mpu_get_accel_reg(xl,&debugx);
 	   cnt++;
 	   if(cnt%10==0){
-		      mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],accel[0],accel[1],accel[2]);
+		      mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],accel[0],accel[1],accel[2],gyro[0],gyro[1],gyro[2]);
 
 	   }
 	   if(cnt%5==0){

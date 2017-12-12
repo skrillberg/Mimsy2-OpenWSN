@@ -413,4 +413,27 @@ void alt_mlMatrixVectorMult(long matrix[9], const long vecIn[3], long *vecOut)  
         }
 }
 
-
+void alt_inv_q_normalizef(float *q)
+{
+    //INVENSENSE_FUNC_START;
+    float normSF = 0;
+    float xHalf = 0;
+    normSF = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+    if (normSF < 2) {
+        xHalf = 0.5f * normSF;
+        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+        normSF = normSF * (1.5f - xHalf * normSF * normSF);
+        q[0] *= normSF;
+        q[1] *= normSF;
+        q[2] *= normSF;
+        q[3] *= normSF;
+    } else {
+        q[0] = 1.0;
+        q[1] = 0.0;
+        q[2] = 0.0;
+        q[3] = 0.0;
+    }
+    normSF = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+}

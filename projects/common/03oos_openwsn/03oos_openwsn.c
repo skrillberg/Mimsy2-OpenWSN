@@ -3,7 +3,7 @@
 
 \author Thomas Watteyne <watteyne@eecs.berkeley.edu>, August 2010
 */
-
+#include <math.h>
 #include "board.h"
 #include "scheduler.h"
 #include "openstack.h"
@@ -21,6 +21,7 @@ long vec[3];
 //extern void inv_q_rotate(const long *q, const long *in, long *out);
 int mote_main(void) {
    
+	int gyro_fsr = 2000;
    // initialize
    board_init();
 //   scheduler_init();
@@ -41,7 +42,7 @@ int mote_main(void) {
 
    mpu_set_sensors(INV_XYZ_ACCEL|INV_XYZ_GYRO); //turn on sensor
    mpu_set_accel_fsr(16); //set fsr for accel
-   mpu_set_gyro_fsr(2000); //set fsr for accel
+   mpu_set_gyro_fsr(gyro_fsr); //set fsr for accel
 
    mimsyDmpBegin();
 
@@ -57,7 +58,20 @@ int mote_main(void) {
    long rot[9];
    int cnt=0;
    float mag;
-   float servo_time;
+   float servo_time_0;
+   float servo_time_1;
+   float xdif;
+   float ydif;
+   float zdif;
+   long xvec[3] = {0x40000000,0,0};
+   float xref[3] = {1,0,0};
+   long xrot[3];
+   float xfloat[3];
+   float pitch;
+   float fquats[4];
+   float roll;
+   float rollbias=0.5;
+   float pitchbias=1;
    while(1){
 	      dmp_read_fifo(gyro, accel, quat,&timestamp2, &sensors, &more);
 	      alt_inv_q_rotate(quat,in,vec);
@@ -70,14 +84,42 @@ int mote_main(void) {
 	     // mpu_get_accel_reg(xl,&debugx);
 	   cnt++;
 	   if(cnt%10==0){
-		      mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],accel[0],accel[1],accel[2],gyro[0],gyro[1],gyro[2]);
+		      //mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],accel[0],accel[1],accel[2],gyro[0],gyro[1],gyro[2]);
 
+		   	   //pitch = 2*(quat[0]*quat[2]-quat[3]*quat[1]);
+		       mimsyPrintf("\n Orientation Vector: \%011d, \%011d, \%011d, ",xrot[0],xrot[1],xrot[2]);
 	   }
 	   if(cnt%5==0){
-		   mag = fvec[0]*fvec[0]+fvec[1]*fvec[1];
-		   servo_time = 1+mag;
-		   servo_rotate_time(servo_time,0);
-		   servo_rotate_time(servo_time,1);
+		   	  alt_inv_q_rotate(quat,xvec,xrot);
+		      xfloat[0]=(float)xrot[0]/(float)0x40000000;
+		      xfloat[1]=(float)xrot[1]/(float)0x40000000;
+		      xfloat[2]=(float)xrot[2]/(float)0x40000000;
+		      //xrot is the direction in global coordinates of where the x body axis is pointing
+
+		   //mag = fvec[0]*fvec[0]+fvec[1]*fvec[1];
+		   ydif= xfloat[1]-xref[1];
+		   zdif = xfloat[2]-xref[2];
+
+		   //pitch control
+		   fquats[0]=(float)quat[0]/(float)0x40000000;
+		   fquats[1]=(float)quat[1]/(float)0x40000000;
+		   fquats[2]=(float)quat[2]/(float)0x40000000;
+		   fquats[3]=(float)quat[3]/(float)0x40000000;
+
+		   pitch = 2*(fquats[0]*fquats[2]-fquats[3]*fquats[1]); //computes sin of pitch
+		   servo_time_0 = 1.45+pitch/2 * pitchbias;
+		   servo_time_1= 1.45-pitch/2 * pitchbias;
+
+		   //servo_time_0 = 1.45;
+		   //servo_time_1= 1.45;
+		   //roll control
+		   roll = 2 * (fquats[0]*fquats[1] + fquats[2] * fquats[3]) / (1 -2*(fquats[1] * fquats[1] +fquats[2]*fquats[2]));
+		   servo_time_0 = servo_time_0 + roll/2 * rollbias;
+		   servo_time_1 = servo_time_1 +roll/2 * rollbias;
+
+
+		   servo_rotate_time(servo_time_0,0);
+		   servo_rotate_time(servo_time_1,1);
 
 
 	   }

@@ -17,7 +17,7 @@
 #include "mpu.h"
 #include "log.h"
 //#include "ml_math_func.h"
-#include "math.h"
+#include <math.h>
 
 //defines
 
@@ -437,3 +437,6 @@ void alt_inv_q_normalizef(float *q)
     }
     normSF = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
 }
+
+
+

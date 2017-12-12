@@ -19,6 +19,9 @@ IMUData data;
 long vec[3];
 
 //extern void inv_q_rotate(const long *q, const long *in, long *out);
+
+void alt_inv_q_norm4(float *q);
+
 int mote_main(void) {
    
 	int gyro_fsr = 2000;
@@ -105,15 +108,15 @@ int mote_main(void) {
 		   fquats[1]=(float)quat[1]/(float)0x40000000;
 		   fquats[2]=(float)quat[2]/(float)0x40000000;
 		   fquats[3]=(float)quat[3]/(float)0x40000000;
-
-		   pitch = 2*(fquats[0]*fquats[2]-fquats[3]*fquats[1]); //computes sin of pitch
+		   alt_inv_q_norm4(fquats);
+		   pitch =  asinf( 2*(fquats[0]*fquats[2]-fquats[3]*fquats[1])); //computes sin of pitch
 		   servo_time_0 = 1.45+pitch/2 * pitchbias;
 		   servo_time_1= 1.45-pitch/2 * pitchbias;
 
 		   //servo_time_0 = 1.45;
 		   //servo_time_1= 1.45;
 		   //roll control
-		   roll = 2 * (fquats[0]*fquats[1] + fquats[2] * fquats[3]) / (1 -2*(fquats[1] * fquats[1] +fquats[2]*fquats[2]));
+		   roll = atan2f(2 * (fquats[0]*fquats[1] + fquats[2] * fquats[3]) ,(1 -2*(fquats[1] * fquats[1] +fquats[2]*fquats[2])));
 		   servo_time_0 = servo_time_0 + roll/2 * rollbias;
 		   servo_time_1 = servo_time_1 +roll/2 * rollbias;
 
@@ -135,3 +138,20 @@ int mote_main(void) {
 }
 
 void sniffer_setListeningChannel(uint8_t channel){return;}
+
+void alt_inv_q_norm4(float *q)
+{
+    float mag;
+    mag = sqrtf(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+    if (mag) {
+        q[0] /= mag;
+        q[1] /= mag;
+        q[2] /= mag;
+        q[3] /= mag;
+    } else {
+        q[0] = 1.f;
+        q[1] = 0.f;
+        q[2] = 0.f;
+        q[3] = 0.f;
+    }
+}

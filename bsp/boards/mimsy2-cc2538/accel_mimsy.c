@@ -38,9 +38,9 @@ struct platform_data_s {
 };
 
 static struct platform_data_s gyro_pdata = {
-    .orientation = { 1, 0, 0,
-                     0, -1, 0,
-                     0, 0, -1}
+    .orientation = { 0, 0, -1,
+                     -1, 0, 0,
+                     0, 1, 0}
 };
 struct rx_s {
     unsigned char header[3];

@@ -23,7 +23,7 @@ IMUData data;
 
 long vec[3];
 
-#define FLASH_PAGE_STORAGE_START              14
+#define FLASH_PAGE_STORAGE_START              50
 #define FLASH_PAGES_TOUSE                       10
 #define PAGE_SIZE                2048
 //extern void inv_q_rotate(const long *q, const long *in, long *out);
@@ -94,11 +94,12 @@ int mote_main(void) {
    IMUData datapoint;
    IMUData data[128];
    IMUData flashData[128];
-   uint32_t currentflashpage=14;
+   uint32_t currentflashpage=FLASH_PAGE_STORAGE_START;
    uint32_t pagesWritten=0;
    bool stopLogging = false;
    IMUDataCard cards[100];
    IMUDataCard cards_stable[100];
+   IMUDataCard card;
 
    for(int i=0;i<100;i++){
      (cards_stable[i].page)=FLASH_PAGE_STORAGE_START+i;
@@ -115,16 +116,16 @@ int mote_main(void) {
 
    while(1){
 
-	      if(!triggered && armed){
-	        if((datapoint.signedfields.accelY<-3*32768/16 ||datapoint.signedfields.accelY>3*32767/16)||(datapoint.signedfields.accelX<-3*32768/16 ||datapoint.signedfields.accelX>3*32767/16)  ||(datapoint.signedfields.accelZ<-3*32768/16 ||datapoint.signedfields.accelZ>3*32767/16) ){
-	          mimsyLedSet(RED_LED);
-	          triggered=true;
-	      //    UARTprintf("\n Accel X: %d, Accel Y: %d, Accel Z: %d ",debug4.signedfields.accelX,debug4.signedfields.accelY,debug4.signedfields.accelZ);
-	        }
-	      }
-
+	   //always runs regardless of logging
 	      dmp_read_fifo(gyro, accel, quat,&timestamp2, &sensors, &more);
+	      datapoint.signedfields.accelX = accel[0];
+		  datapoint.signedfields.accelY = accel[1];
+		  datapoint.signedfields.accelZ = accel[2];
+		  datapoint.signedfields.gyroX = gyro[0];
+		  datapoint.signedfields.gyroY = gyro[1];
+		  datapoint.signedfields.gyroZ = gyro[2];
 	      alt_inv_q_rotate(quat,in,vec);
+
 	      fvec[0]=(float)vec[0]/(float)0x40000000;
 	      fvec[1]=(float)vec[1]/(float)0x40000000;
 	      fvec[2]=(float)vec[2]/(float)0x40000000;
@@ -138,18 +139,18 @@ int mote_main(void) {
 
 		   	   //pitch = 2*(quat[0]*quat[2]-quat[3]*quat[1]);
 		       //mimsyPrintf("\n Orientation Vector: \%011d, \%011d, \%011d, ",xrot[0],xrot[1],xrot[2]);
-		   	  mimsyPrintf("\n pitch: \%05d, yaw: \%05d,\%012d,\%012d,\%012d",(int)(servo_time_0*100),(int)(servo_time_1*100),gyro[0],gyro[1],gyro[2]);
+		   	 // mimsyPrintf("\n pitch: \%05d, yaw: \%05d,\%012d,\%012d,\%012d",(int)(servo_time_0*100),(int)(servo_time_1*100),gyro[0],gyro[1],gyro[2]);
 	   }
 	  // if(cnt%1==0){
-		   	  alt_inv_q_rotate(quat,xvec,xrot);
-		      xfloat[0]=(float)xrot[0]/(float)0x40000000;
-		      xfloat[1]=(float)xrot[1]/(float)0x40000000;
-		      xfloat[2]=(float)xrot[2]/(float)0x40000000;
+		   	 // alt_inv_q_rotate(quat,xvec,xrot);
+		      //xfloat[0]=(float)xrot[0]/(float)0x40000000;
+		      //xfloat[1]=(float)xrot[1]/(float)0x40000000;
+		      //xfloat[2]=(float)xrot[2]/(float)0x40000000;
 		      //xrot is the direction in global coordinates of where the x body axis is pointing
 
 		   //mag = fvec[0]*fvec[0]+fvec[1]*fvec[1];
-		   ydif= xfloat[1]-xref[1];
-		   zdif = xfloat[2]-xref[2];
+		   //ydif= xfloat[1]-xref[1];
+		   //zdif = xfloat[2]-xref[2];
 
 		   //pitch control
 		   fquats[0]=(float)quat[0]/(float)0x40000000;
@@ -209,72 +210,94 @@ int mote_main(void) {
 		   //servo_rotate_time(2);
 	   }
 
-	   ///////////////////////////////////datalogging
-	   if(armed){
-	      if(bufferCount==128){
-	        if(!triggered){
-	          //UARTprintf("%c[2K",27);
-	        //  UARTprintf("\n Accel X: %d, Accel Y: %d, Accel Z: %d ",debug4.signedfields.accelX,debug4.signedfields.accelY,debug4.signedfields.accelZ);
-	        //  UARTprintf(" Gyro X: %d, Gyro Y: %d, Gyro Z: %d ",debug4.signedfields.gyroX,debug4.signedfields.gyroY,debug4.signedfields.gyroZ);
-	         // UARTprintf(", Timestamp: %x",debug4.fields.timestamp);
-	          mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],datapoint.signedfields.accelX,datapoint.signedfields.accelY,datapoint.signedfields.accelZ);
-	        }
-	        bufferCount=0;
-
-	        if(triggered && !stopLogging){
-	          IMUDataCard *card=&(cards[pagesWritten]);
-	          flashWriteIMU(data,128,currentflashpage,card);
-
-	          pagesWritten++;
-	          currentflashpage++;
-	        }
-	      }
-
-	      if(pagesWritten==FLASH_PAGES_TOUSE&&!stopLogging){
-	        stopLogging=true;
-	        mimsyLedClear(GREEN_LED);
-	      }
-	   }
+	   //begin logging fsm/////////////////////////////////////////////////////////////////
 	      // if logging mode is off, mimsy will loop a serial output of the data; it should also do this if it isn't armed
-	      while(stopLogging || (!armed)){
+	      if(stopLogging || (!armed)){
+				 if(armed){
+					 armed = 0; //disarm if stopLogging flag triggered this state
+					 stopLogging = 0; //reset stopLogging
+				 }
+				 UARTprintf("\n data starts here:+ \n"); //+ is start condition
 
-	    	 UARTprintf("\n data starts here:+ \n"); //+ is start condition
-	        for(int cardindex=0;cardindex<FLASH_PAGES_TOUSE;cardindex++){
-	          IMUData sendData[128];
-	          flashReadIMU(cards_stable[cardindex],sendData,128);
+				 for(int cardindex=0;cardindex<FLASH_PAGES_TOUSE;cardindex++){
+				  IMUData sendData[128];
+				  flashReadIMU(cards_stable[cardindex],sendData,128);
 
-	          //loop through each data point
-	          for(int dataindex=0;dataindex<128;dataindex++){
-
-
-
-	              //print csv data to serial
-	              //format: xl_x,xl_y,xl_z,gyrox,gyroy,gyroz,timestamp
-	            UARTprintf("%d,%d,%d,%d,%d,%d,%x,%d,%d \n",
-	                          sendData[dataindex].signedfields.accelX,
-	                          sendData[dataindex].signedfields.accelY,
-	                          sendData[dataindex].signedfields.accelZ,
-	                          sendData[dataindex].signedfields.gyroX,
-	                          sendData[dataindex].signedfields.gyroY,
-	                          sendData[dataindex].signedfields.gyroZ,
-	                          sendData[dataindex].fields.timestamp,
-	                          cardindex,
-	                          dataindex);
+				  //loop through each data point
+				  for(int dataindex=0;dataindex<128;dataindex++){
 
 
-	          }
 
-	        }
-	        UARTprintf("= \n data ends here\n"); //= is end
-	          for(int ui32Loop=1;ui32Loop<500000;ui32Loop++) {
-	          }
+					  //print csv data to serial
+					  //format: xl_x,xl_y,xl_z,gyrox,gyroy,gyroz,timestamp
+					UARTprintf("%d,%d,%d,%d,%d,%d,%x,%d,%d \n",
+								  sendData[dataindex].signedfields.accelX,
+								  sendData[dataindex].signedfields.accelY,
+								  sendData[dataindex].signedfields.accelZ,
+								  sendData[dataindex].signedfields.gyroX,
+								  sendData[dataindex].signedfields.gyroY,
+								  sendData[dataindex].signedfields.gyroZ,
+								  sendData[dataindex].fields.timestamp,
+								  cardindex,
+								  dataindex);
 
-	   	   if ((armed==0) && (GPIOPinRead(GPIO_A_BASE,GPIO_PIN_5) == 0) ){
-	   		   armed = 1;
-	   		   mimsyLedSet(GREEN_LED);
-	   	   }
 
-	        }
+				  }
+
+				}
+				UARTprintf("= \n data ends here\n"); //= is end
+				  for(int ui32Loop=1;ui32Loop<5000;ui32Loop++) {
+				  }
+
+				   if ((GPIOPinRead(GPIO_A_BASE,GPIO_PIN_5) == 0) ){
+					   armed = 1;
+					   mimsyLedSet(GREEN_LED);
+				   }
+
+				}
+
+	      else if(!triggered && armed){
+				  mimsyPrintf("\n armed and not triggered: accel x",datapoint.signedfields.accelX);
+				if((datapoint.signedfields.accelY<-3*32768/16 ||datapoint.signedfields.accelY>3*32767/16)||(datapoint.signedfields.accelX<-3*32768/16 ||datapoint.signedfields.accelX>3*32767/16)  ||(datapoint.signedfields.accelZ<-3*32768/16 ||datapoint.signedfields.accelZ>3*32767/16) ){
+				  mimsyLedSet(RED_LED);
+				  triggered=true;
+				  bufferCount = 0;
+			  //    UARTprintf("\n Accel X: %d, Accel Y: %d, Accel Z: %d ",debug4.signedfields.accelX,debug4.signedfields.accelY,debug4.signedfields.accelZ);
+				}
+	      }
+
+
+
+	   ///////////////////////////////////datalogging
+	      else if(armed && triggered){
+			  data[bufferCount] = datapoint;
+			  bufferCount++;
+			  if(bufferCount==128){
+				if(!triggered){
+				  //UARTprintf("%c[2K",27);
+				//  UARTprintf("\n Accel X: %d, Accel Y: %d, Accel Z: %d ",debug4.signedfields.accelX,debug4.signedfields.accelY,debug4.signedfields.accelZ);
+				//  UARTprintf(" Gyro X: %d, Gyro Y: %d, Gyro Z: %d ",debug4.signedfields.gyroX,debug4.signedfields.gyroY,debug4.signedfields.gyroZ);
+				 // UARTprintf(", Timestamp: %x",debug4.fields.timestamp);
+				  mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],datapoint.signedfields.accelX,datapoint.signedfields.accelY,datapoint.signedfields.accelZ);
+				}
+				bufferCount=0;
+
+				if(triggered && !stopLogging){
+
+				  flashWriteIMU(data,128,currentflashpage,&card);
+
+				  pagesWritten++;
+				  currentflashpage++;
+				}
+			  }
+
+			  if(pagesWritten==FLASH_PAGES_TOUSE&&!stopLogging){
+				stopLogging=true;
+				triggered = false;
+				mimsyLedClear(GREEN_LED);
+			  }
+	   }
+
 
    }
 

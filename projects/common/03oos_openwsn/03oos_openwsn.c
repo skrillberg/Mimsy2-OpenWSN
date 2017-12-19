@@ -14,10 +14,18 @@
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
 #include "uart_mimsy.h"
+#include "gpio.h"
+#include "headers/hw_memmap.h"
+#include "ioc.h"
+#include "led_mimsy.h"
+
 IMUData data;
 
 long vec[3];
 
+#define FLASH_PAGE_STORAGE_START              14
+#define FLASH_PAGES_TOUSE                       10
+#define PAGE_SIZE                2048
 //extern void inv_q_rotate(const long *q, const long *in, long *out);
 
 void alt_inv_q_norm4(float *q);
@@ -79,8 +87,42 @@ int mote_main(void) {
    float q2_err;
    float q1_err;
    float rollbias=0;
-   float pitchbias=3;
+   float pitchbias=5;
+   int armed=0;
+   int bufferCount=0;
+   bool triggered=false;
+   IMUData datapoint;
+   IMUData data[128];
+   IMUData flashData[128];
+   uint32_t currentflashpage=14;
+   uint32_t pagesWritten=0;
+   bool stopLogging = false;
+   IMUDataCard cards[100];
+   IMUDataCard cards_stable[100];
+
+   for(int i=0;i<100;i++){
+     (cards_stable[i].page)=FLASH_PAGE_STORAGE_START+i;
+   }
+
+  //config arming gpio/////////////////////////////////////////
+
+  // GPIOPinTypeGPIOInput(GPIO_A_BASE,GPIO_PIN_5);
+   GPIODirModeSet(GPIO_A_BASE,GPIO_PIN_5,GPIO_DIR_MODE_IN);
+   IOCPadConfigSet(GPIO_A_BASE,GPIO_PIN_5,IOC_OVERRIDE_PUE);  //set pull up
+
+
+
+
    while(1){
+
+	      if(!triggered && armed){
+	        if((datapoint.signedfields.accelY<-3*32768/16 ||datapoint.signedfields.accelY>3*32767/16)||(datapoint.signedfields.accelX<-3*32768/16 ||datapoint.signedfields.accelX>3*32767/16)  ||(datapoint.signedfields.accelZ<-3*32768/16 ||datapoint.signedfields.accelZ>3*32767/16) ){
+	          mimsyLedSet(RED_LED);
+	          triggered=true;
+	      //    UARTprintf("\n Accel X: %d, Accel Y: %d, Accel Z: %d ",debug4.signedfields.accelX,debug4.signedfields.accelY,debug4.signedfields.accelZ);
+	        }
+	      }
+
 	      dmp_read_fifo(gyro, accel, quat,&timestamp2, &sensors, &more);
 	      alt_inv_q_rotate(quat,in,vec);
 	      fvec[0]=(float)vec[0]/(float)0x40000000;
@@ -118,8 +160,8 @@ int mote_main(void) {
 		   //mag = sqrtf( fquats[1] * fquats[1] + fquats[2] * fquats[2] + fquats[3] * fquats[3]);
 		   alt_inv_q_norm4(fquats);
 		   pitch = asinf( 2*(fquats[0]*fquats[2]-fquats[3]*fquats[1])); //computes sin of pitch
-		   servo_time_0 = 1.45-pitch/3.14/2 * pitchbias;
-		   servo_time_1= 1.45+pitch/3.14/2 * pitchbias;
+		   servo_time_0 = 1.45+pitch/3.14/2 * pitchbias;
+		   servo_time_1= 1.45-pitch/3.14/2 * pitchbias;
 
 		   //q2_err = 3.14-acosf(quat_dot_product(fquats,yref)/mag);
 		   //q1_err = quat_dot_product(fquats,zref)/mag;
@@ -166,6 +208,74 @@ int mote_main(void) {
 		   cnt=0;
 		   //servo_rotate_time(2);
 	   }
+
+	   ///////////////////////////////////datalogging
+	   if(armed){
+	      if(bufferCount==128){
+	        if(!triggered){
+	          //UARTprintf("%c[2K",27);
+	        //  UARTprintf("\n Accel X: %d, Accel Y: %d, Accel Z: %d ",debug4.signedfields.accelX,debug4.signedfields.accelY,debug4.signedfields.accelZ);
+	        //  UARTprintf(" Gyro X: %d, Gyro Y: %d, Gyro Z: %d ",debug4.signedfields.gyroX,debug4.signedfields.gyroY,debug4.signedfields.gyroZ);
+	         // UARTprintf(", Timestamp: %x",debug4.fields.timestamp);
+	          mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],datapoint.signedfields.accelX,datapoint.signedfields.accelY,datapoint.signedfields.accelZ);
+	        }
+	        bufferCount=0;
+
+	        if(triggered && !stopLogging){
+	          IMUDataCard *card=&(cards[pagesWritten]);
+	          flashWriteIMU(data,128,currentflashpage,card);
+
+	          pagesWritten++;
+	          currentflashpage++;
+	        }
+	      }
+
+	      if(pagesWritten==FLASH_PAGES_TOUSE&&!stopLogging){
+	        stopLogging=true;
+	        mimsyLedClear(GREEN_LED);
+	      }
+	   }
+	      // if logging mode is off, mimsy will loop a serial output of the data; it should also do this if it isn't armed
+	      while(stopLogging || (!armed)){
+
+	    	 UARTprintf("\n data starts here:+ \n"); //+ is start condition
+	        for(int cardindex=0;cardindex<FLASH_PAGES_TOUSE;cardindex++){
+	          IMUData sendData[128];
+	          flashReadIMU(cards_stable[cardindex],sendData,128);
+
+	          //loop through each data point
+	          for(int dataindex=0;dataindex<128;dataindex++){
+
+
+
+	              //print csv data to serial
+	              //format: xl_x,xl_y,xl_z,gyrox,gyroy,gyroz,timestamp
+	            UARTprintf("%d,%d,%d,%d,%d,%d,%x,%d,%d \n",
+	                          sendData[dataindex].signedfields.accelX,
+	                          sendData[dataindex].signedfields.accelY,
+	                          sendData[dataindex].signedfields.accelZ,
+	                          sendData[dataindex].signedfields.gyroX,
+	                          sendData[dataindex].signedfields.gyroY,
+	                          sendData[dataindex].signedfields.gyroZ,
+	                          sendData[dataindex].fields.timestamp,
+	                          cardindex,
+	                          dataindex);
+
+
+	          }
+
+	        }
+	        UARTprintf("= \n data ends here\n"); //= is end
+	          for(int ui32Loop=1;ui32Loop<500000;ui32Loop++) {
+	          }
+
+	   	   if ((armed==0) && (GPIOPinRead(GPIO_A_BASE,GPIO_PIN_5) == 0) ){
+	   		   armed = 1;
+	   		   mimsyLedSet(GREEN_LED);
+	   	   }
+
+	        }
+
    }
 
    // start
@@ -197,5 +307,10 @@ float quat_dot_product(float *quat,float *vec){
 	float dot =  quat[1] * vec[0] + quat[2] * vec[1] + quat[3] * vec[2];
 
 	return dot;
+
+}
+
+static void armed_handler(){
+
 
 }

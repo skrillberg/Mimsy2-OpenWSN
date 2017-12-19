@@ -14,6 +14,7 @@
 #include "ioc.h"
 //#include "inchworm.h"
 #include "flash.h"
+#include "uart_mimsy.h"
 
 #define IMU_DATA_SIZE            16
 #define PAGE_SIZE                2048
@@ -35,15 +36,15 @@ void flashWriteIMU(IMUData data[],uint32_t size, uint32_t startPage,IMUDataCard 
 
   uint32_t structNum = size;
   
-
+  mimsyPrintf("\n Flash Page Address: %x",pageStartAddr);
   i32Res = FlashMainPageErase(pageStartAddr); //erase page so there it can be written to
-  
+  mimsyPrintf("\n Flash Erase Status: %d",i32Res);
   for(uint32_t i=0;i<size;i++ ){
       uint32_t* wordified_data=data[i].bits; //retrieves the int32 array representation of the IMUData struct
      IntMasterDisable(); //disables interrupts to prevent the write operation from being messed up
       i32Res = FlashMainPageProgram(wordified_data,pageStartAddr+i*IMU_DATA_STRUCT_SIZE,IMU_DATA_STRUCT_SIZE); //write struct to flash
         IntMasterEnable();//renables interrupts
-      
+      mimsyPrintf("\n Flash Write Status: %d",i32Res);
    }
 
    //update card with location information

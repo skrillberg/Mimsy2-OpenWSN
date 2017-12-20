@@ -26,7 +26,7 @@
 #define FLASH_PAGE_STORAGE_START              120
 #define FLASH_PAGES_TOUSE                       10
 #define PAGE_SIZE                2048
-#define DATAPOINTS  10
+#define DATAPOINTS  4
 //extern void inv_q_rotate(const long *q, const long *in, long *out);
 
 

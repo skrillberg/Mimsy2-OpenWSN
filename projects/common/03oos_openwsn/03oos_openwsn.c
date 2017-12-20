@@ -313,7 +313,7 @@ mimsyLedClear(GREEN_LED);
 				  flashWriteIMU(logdata,DATAPOINTS,currentflashpage,wordsWritten);
 				  mimsyPrintf("Page Number %d Written, Pages Written: %d \n", currentflashpage,pagesWritten );
 				  wordsWritten = wordsWritten + DATAPOINTS*4;
-				  if(wordsWritten > 512-16*DATAPOINTS/4-1){
+				  if(wordsWritten > 512-IMU_DATA_STRUCT_SIZE/4*DATAPOINTS){
 				  wordsWritten = 0;
 				  pagesWritten++;
 				  currentflashpage++;
@@ -377,11 +377,11 @@ static void printFlash(IMUDataCard * cards_stable, int page_struct_capacity){
 
 			 for(int words = 0; words < page_struct_capacity*IMU_DATA_STRUCT_SIZE/4*DATAPOINTS; words+=IMU_DATA_STRUCT_SIZE/4*DATAPOINTS){
 
-				  IMUData sendData[10];
-				  flashReadIMUSection(cards_stable[cardindex],sendData,10,words);
+				  IMUData sendData[DATAPOINTS];
+				  flashReadIMUSection(cards_stable[cardindex],sendData,DATAPOINTS,words);
 
 				  //loop through each data point
-				  for(int dataindex=0;dataindex<10;dataindex++){
+				  for(int dataindex=0;dataindex<DATAPOINTS;dataindex++){
 
 
 

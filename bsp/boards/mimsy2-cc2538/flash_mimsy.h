@@ -56,5 +56,7 @@ typedef struct IMUDataCard{
 
 extern void flashWriteIMU(IMUData data[],uint32_t size, uint32_t startPage, int wordsWritten);
 extern void flashReadIMU(IMUDataCard card, IMUData *data, uint32_t size);
+extern void flashReadIMUSection(IMUDataCard card, IMUData *data, uint32_t size,int wordsRead);
+
 
 #endif

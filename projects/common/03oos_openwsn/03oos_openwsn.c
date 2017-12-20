@@ -26,14 +26,14 @@
 #define FLASH_PAGE_STORAGE_START              120
 #define FLASH_PAGES_TOUSE                       10
 #define PAGE_SIZE                2048
-#define DATAPOINTS  4
+#define DATAPOINTS  10
 //extern void inv_q_rotate(const long *q, const long *in, long *out);
 
 
 
 void alt_inv_q_norm4(float *q);
 float quat_dot_product(float *quat,float *vec);
-
+static void printFlash(IMUDataCard * cards_stable, int page_struct_capacity);
 int mote_main(void) {
 	//mimsyLedSet(GREEN_LED);
 	//for(int i = 0; i<10000; i++){
@@ -90,14 +90,14 @@ int mote_main(void) {
 	int armed = 0;
 	int bufferCount = 0;
 	int gyro_fsr;
-
+	int wordsRead = 0;
 	int cnt;
 	long in[3] ;
 	uint32_t currentflashpage;
 
 	bool stopLogging ;
 	bool triggered;
-
+	int page_struct_capacity = (PAGE_SIZE/4)/(IMU_DATA_STRUCT_SIZE/4*DATAPOINTS);
 	   // initialize
 	   board_init();
 	//   scheduler_init();
@@ -260,36 +260,40 @@ mimsyLedClear(GREEN_LED);
 	      if( (!armed)){
 	    	  //clear fifo, probably better way to do this
 	    	   mimsyPrintf("\n armed state");
-
+	    	   printFlash(cards_stable,page_struct_capacity);
+/*
 				 mimsyPrintf("\n data starts here:+ \n"); //+ is start condition
 
 				 for(int cardindex=0;cardindex<FLASH_PAGES_TOUSE;cardindex++){
-				  IMUData sendData[10];
-				  flashReadIMU(cards_stable[cardindex],sendData,10);
 
-				  //loop through each data point
-				  for(int dataindex=0;dataindex<10;dataindex++){
+					 for(int words = 0; words < page_struct_capacity*IMU_DATA_STRUCT_SIZE/4*DATAPOINTS; words+=IMU_DATA_STRUCT_SIZE/4*DATAPOINTS){
 
+						  IMUData sendData[10];
+						  flashReadIMUSection(cards_stable[cardindex],sendData,10,words);
 
-
-					  //print csv data to serial
-					  //format: xl_x,xl_y,xl_z,gyrox,gyroy,gyroz,timestamp
-					mimsyPrintf("%d,%d,%d,%d,%d,%d,%x,%d,%d \n",
-								  sendData[dataindex].signedfields.accelX,
-								  sendData[dataindex].signedfields.accelY,
-								  sendData[dataindex].signedfields.accelZ,
-								  sendData[dataindex].signedfields.gyroX,
-								  sendData[dataindex].signedfields.gyroY,
-								  sendData[dataindex].signedfields.gyroZ,
-								  sendData[dataindex].fields.timestamp,
-								  cardindex,
-								  dataindex);
+						  //loop through each data point
+						  for(int dataindex=0;dataindex<10;dataindex++){
 
 
-				  }
 
+							  //print csv data to serial
+							  //format: xl_x,xl_y,xl_z,gyrox,gyroy,gyroz,timestamp
+							mimsyPrintf("%d,%d,%d,%d,%d,%d,%x,%d,%d \n",
+										  sendData[dataindex].signedfields.accelX,
+										  sendData[dataindex].signedfields.accelY,
+										  sendData[dataindex].signedfields.accelZ,
+										  sendData[dataindex].signedfields.gyroX,
+										  sendData[dataindex].signedfields.gyroY,
+										  sendData[dataindex].signedfields.gyroZ,
+										  sendData[dataindex].fields.timestamp,
+										  cardindex,
+										  dataindex+words*4/IMU_DATA_STRUCT_SIZE);
+
+
+						  }
+					 }
 				}
-				mimsyPrintf("= \n data ends here\n"); //= is end
+				mimsyPrintf("= \n data ends here\n"); //= is end */
 				  for(int ui32Loop=1;ui32Loop<5000;ui32Loop++) {
 				  }
 
@@ -369,7 +373,7 @@ mimsyLedClear(GREEN_LED);
 				  flashWriteIMU(logdata,DATAPOINTS,currentflashpage,wordsWritten);
 				  mimsyPrintf("Page Number %d Written, Pages Written: %d \n", currentflashpage,pagesWritten );
 				  wordsWritten = wordsWritten + DATAPOINTS*4;
-				  if(wordsWritten > 512-16/4+1){
+				  if(wordsWritten > 512-16*DATAPOINTS/4-1){
 				  wordsWritten = 0;
 				  pagesWritten++;
 				  currentflashpage++;
@@ -423,3 +427,41 @@ static void armed_handler(){
 
 
 }
+
+static void printFlash(IMUDataCard * cards_stable, int page_struct_capacity){
+
+
+		 mimsyPrintf("\n data starts here:+ \n"); //+ is start condition
+
+		 for(int cardindex=0;cardindex<FLASH_PAGES_TOUSE;cardindex++){
+
+			 for(int words = 0; words < page_struct_capacity*IMU_DATA_STRUCT_SIZE/4*DATAPOINTS; words+=IMU_DATA_STRUCT_SIZE/4*DATAPOINTS){
+
+				  IMUData sendData[10];
+				  flashReadIMUSection(cards_stable[cardindex],sendData,10,words);
+
+				  //loop through each data point
+				  for(int dataindex=0;dataindex<10;dataindex++){
+
+
+
+					  //print csv data to serial
+					  //format: xl_x,xl_y,xl_z,gyrox,gyroy,gyroz,timestamp
+					mimsyPrintf("%d,%d,%d,%d,%d,%d,%x,%d,%d \n",
+								  sendData[dataindex].signedfields.accelX,
+								  sendData[dataindex].signedfields.accelY,
+								  sendData[dataindex].signedfields.accelZ,
+								  sendData[dataindex].signedfields.gyroX,
+								  sendData[dataindex].signedfields.gyroY,
+								  sendData[dataindex].signedfields.gyroZ,
+								  sendData[dataindex].fields.timestamp,
+								  cardindex,
+								  dataindex+words*4/IMU_DATA_STRUCT_SIZE);
+
+
+				  }
+			 }
+		}
+		mimsyPrintf("= \n data ends here\n"); //= is end
+}
+

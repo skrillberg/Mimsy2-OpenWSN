@@ -74,3 +74,23 @@ void flashReadIMU(IMUDataCard card, IMUData * dataArray,uint32_t size){
   }
   
 }
+
+/*This function reads a page worth of IMUData from flash.
+  Parameters:
+    IMUDataCard card: The IMUDataCard that corresponds to the data that you want to read from flash
+    IMUData * dataArray: pointer that points to location of data array that you want the read operation to be written to
+    uint32_t size: size of dataArray in number of IMUData structures
+*/
+void flashReadIMUSection(IMUDataCard card, IMUData * dataArray,uint32_t size, int wordsRead){
+
+  uint32_t pageAddr=FLASH_BASE+card.page*PAGE_SIZE;
+
+  for(uint32_t i=0;i<size;i++){
+    for(uint32_t j=0;j<IMU_DATA_STRUCT_SIZE/4;j++){
+       IntMasterDisable();
+    dataArray[i].bits[j]=FlashGet(pageAddr+i*16+j*4+wordsRead*4);
+     IntMasterEnable();
+    }
+  }
+
+}

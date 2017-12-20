@@ -27,6 +27,7 @@
 #include "sctimer.h"
 #include "uart.h"
 #include "cryptoengine.h"
+#include "uart_mimsy.h"
 
 //=========================== variables =======================================
 
@@ -186,7 +187,6 @@ static void clock_init(void) {
     SysCtrlSleepSetting();
     SysCtrlDeepSleepSetting();
     SysCtrlWakeupSetting();
-
     /* Re-enable interrupt if initially enabled */
     if (!bIntDisabled) {
         IntMasterEnable();

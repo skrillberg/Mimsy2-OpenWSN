@@ -1,7 +1,7 @@
 #ifndef __FLASH_MIMSY_H__
 #define __FLASH_MIMSY_H__
 
-#define IMU_DATA_STRUCT_SIZE 16
+#define IMU_DATA_STRUCT_SIZE 24
 #include <stdint.h>
 
 /*IMUData is a union data structure used to store imu data points. Access the struct
@@ -19,7 +19,8 @@ typedef union IMUData {
   uint16_t gyroZ;//gyro Z data
   
   uint32_t timestamp;
- 
+  float servo_state_0;
+  float servo_state_1;
   
  
 
@@ -34,12 +35,13 @@ typedef union IMUData {
   int16_t gyroZ;//gyro Z data
   
   int32_t timestamp;
- 
+  float servo_state_0;
+  float servo_state_1;
   
  
 
 } signedfields;
-uint32_t bits[4];
+uint32_t bits[6];
 }IMUData;
 
 

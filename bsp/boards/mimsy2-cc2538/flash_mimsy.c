@@ -16,7 +16,6 @@
 #include "flash.h"
 #include "uart_mimsy.h"
 
-#define IMU_DATA_SIZE            16
 #define PAGE_SIZE                2048
 #define PAGE_TO_ERASE            14
 #define PAGE_TO_ERASE_START_ADDR (FLASH_BASE + (PAGE_TO_ERASE * PAGE_SIZE))
@@ -68,7 +67,7 @@ void flashReadIMU(IMUDataCard card, IMUData * dataArray,uint32_t size){
   for(uint32_t i=0;i<size;i++){
     for(uint32_t j=0;j<IMU_DATA_STRUCT_SIZE/4;j++){
        IntMasterDisable();
-    dataArray[i].bits[j]=FlashGet(pageAddr+i*16+j*4);
+    dataArray[i].bits[j]=FlashGet(pageAddr+i*IMU_DATA_STRUCT_SIZE+j*4);
      IntMasterEnable();
     }
   }
@@ -88,7 +87,7 @@ void flashReadIMUSection(IMUDataCard card, IMUData * dataArray,uint32_t size, in
   for(uint32_t i=0;i<size;i++){
     for(uint32_t j=0;j<IMU_DATA_STRUCT_SIZE/4;j++){
        IntMasterDisable();
-    dataArray[i].bits[j]=FlashGet(pageAddr+i*16+j*4+wordsRead*4);
+    dataArray[i].bits[j]=FlashGet(pageAddr+i*IMU_DATA_STRUCT_SIZE+j*4+wordsRead*4);
      IntMasterEnable();
     }
   }

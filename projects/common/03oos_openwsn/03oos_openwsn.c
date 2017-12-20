@@ -169,6 +169,8 @@ mimsyLedClear(GREEN_LED);
 		  datapoint.signedfields.gyroY = gyro[1];
 		  datapoint.signedfields.gyroZ = gyro[2];
 		  datapoint.fields.timestamp=(uint32_t)timestamp2;
+		  datapoint.fields.servo_state_0 = servo_time_0;
+		  datapoint.fields.servo_state_1 = servo_time_1;
 	    //  alt_inv_q_rotate(quat,in,vec);
 
 	    //  fvec[0]=(float)vec[0]/(float)0x40000000;
@@ -312,7 +314,7 @@ mimsyLedClear(GREEN_LED);
 					mimsyPrintf("begin write page %d",currentflashpage);
 				  flashWriteIMU(logdata,DATAPOINTS,currentflashpage,wordsWritten);
 				  mimsyPrintf("Page Number %d Written, Pages Written: %d \n", currentflashpage,pagesWritten );
-				  wordsWritten = wordsWritten + DATAPOINTS*4;
+				  wordsWritten = wordsWritten + DATAPOINTS*IMU_DATA_STRUCT_SIZE/4;
 				  if(wordsWritten > 512-IMU_DATA_STRUCT_SIZE/4*DATAPOINTS){
 				  wordsWritten = 0;
 				  pagesWritten++;
@@ -387,7 +389,7 @@ static void printFlash(IMUDataCard * cards_stable, int page_struct_capacity){
 
 					  //print csv data to serial
 					  //format: xl_x,xl_y,xl_z,gyrox,gyroy,gyroz,timestamp
-					mimsyPrintf("%d,%d,%d,%d,%d,%d,%d,%d,%d \n",
+					mimsyPrintf("%d,%d,%d,%d,%d,%d,%d,%x,%x,%d,%d \n",
 								  sendData[dataindex].signedfields.accelX,
 								  sendData[dataindex].signedfields.accelY,
 								  sendData[dataindex].signedfields.accelZ,
@@ -395,6 +397,8 @@ static void printFlash(IMUDataCard * cards_stable, int page_struct_capacity){
 								  sendData[dataindex].signedfields.gyroY,
 								  sendData[dataindex].signedfields.gyroZ,
 								  sendData[dataindex].fields.timestamp,
+								  sendData[dataindex].bits[4],
+								  sendData[dataindex].bits[5],
 								  cardindex,
 								  dataindex+words*4/IMU_DATA_STRUCT_SIZE);
 

@@ -37,11 +37,23 @@ struct platform_data_s {
     const signed char orientation[9];
 };
 
+//orientation for upright rocket
+
 static struct platform_data_s gyro_pdata = {
     .orientation = { 0, 0, -1,
                      -1, 0, 0,
                      0, 1, 0}
 };
+
+
+//orientation for flat rocket
+/*static struct platform_data_s gyro_pdata = {
+    .orientation = { 1, 0, 0,
+                     0, -1, 0,
+                     0, 0, -1}
+};*/
+
+
 struct rx_s {
     unsigned char header[3];
     unsigned char cmd;
@@ -258,7 +270,7 @@ void mimsyDmpBegin(){
         hal.dmp_features = DMP_FEATURE_6X_LP_QUAT
         		| DMP_FEATURE_SEND_RAW_ACCEL  | DMP_FEATURE_GYRO_CAL |DMP_FEATURE_SEND_CAL_GYRO;
     dmp_enable_feature(hal.dmp_features);
-    dmp_set_fifo_rate(DEFAULT_MPU_HZ);
+    dmp_set_fifo_rate(100);
     //dmp_enable_6x_lp_quat(1);
     mpu_set_dmp_state(1);
     hal.dmp_on = 1;

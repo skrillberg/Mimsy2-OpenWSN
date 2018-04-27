@@ -1,203 +1,128 @@
 /**
-\brief A simple application to test MAC connectivity.
+\brief Mercator firmware, see https://github.com/openwsn-berkeley/mercator/.
 
-\author Thomas Watteyne <watteyne@eecs.berkeley.edu>, August 2014.
+\author Constanza Perez Garcia <constanza.perezgarcia@gmail.com>, November 2014.
+\author Thomas Watteyne <watteyne@eecs.berkeley.edu>, November 2014.
 */
 
-// stack initialization
-#include "opendefs.h"
 #include "board.h"
 #include "scheduler.h"
 #include "openstack.h"
-#include "opentimers.h"
-// needed for spoofing
-#include "openqueue.h"
-#include "opentimers.h"
-#include "IEEE802154E.h"
-#include "openserial.h"
-#include "packetfunctions.h"
-#include "sixtop.h"
-#include "idmanager.h"
-#include "neighbors.h"
-
-#define LEN_PAYLOAD 100
-
-//=========================== variables =======================================
-
-typedef struct {
-   opentimers_id_t timerId;
-   uint8_t         macpongCounter;
-} macpong_vars_t;
-
-macpong_vars_t macpong_vars;
-
-//=========================== prototypes ======================================
-
-void macpong_initSend(opentimers_id_t id);
-void macpong_send(uint8_t payloadCtr);
-
+#include "opendefs.h"
+#include "accel_mimsy.h"
+#include "flash_mimsy.h"
+#include "servo.c"
+#include "inv_mpu.h"
+#include "inv_mpu_dmp_motion_driver.h"
+#include "uart_mimsy.h"
+#include "gpio.h"
+#include "headers/hw_memmap.h"
+#include "ioc.h"
+#include "led_mimsy.h"
+#include "inchworm.h"
 //=========================== initialization ==================================
 
 int mote_main(void) {
-   board_init();
-   scheduler_init();
-   openstack_init();
-   if (idmanager_getMyID(ADDR_64B)->addr_64b[7]==0x16) {
-      idmanager_setIsDAGroot(TRUE);
+   InchwormMotor iw1={GPIO_D_BASE,GPIO_D_BASE,GPIO_PIN_1,GPIO_PIN_2,1};
+   InchwormMotor iws[1]={iw1};
+   InchwormSetup setup={iws,1,2000,70,1,3,2};
+///////
+   uint32_t timer=3;
+  uint32_t refresh_rate=200;
+   uint32_t center=1.5;
+	 uint32_t pwmTimerClkEnable;
+	 uint32_t pwmTimerBase;
+	 uint32_t freqCnt=SysCtrlClockGet()/1000; //number of ticks in one period is period * clock rate
+	 uint8_t pre_cnt=(freqCnt>>16)&0xFF;	//prescaler count should have the upper bits 16 to 23 of the count
+	 uint16_t timer_cnt=freqCnt & 0xFFFF; 	//lower 16 bits of count value
+	 float neutral_pulse_width = center;	//pulse width for neutral pos
+
+	 //calc pulse widths for servo neutral
+
+	 uint32_t neutral_match_count =  SysCtrlClockGet()/1000*.2;	//match set
+	 uint16_t match_lower = neutral_match_count & 0xFFFF;
+	 uint8_t match_upper = (neutral_match_count >> 16) & 0xFF;
+
+	 switch(timer){
+
+	  case 0:
+	    pwmTimerClkEnable=SYS_CTRL_PERIPH_GPT0;
+	    pwmTimerBase=GPTIMER0_BASE;
+	   // timerIntA=INT_TIMER0A;
+	    //timerIntB=INT_TIMER0B;
+	    break;
+
+	  case 1:
+	    pwmTimerClkEnable=SYS_CTRL_PERIPH_GPT1;
+	    pwmTimerBase=GPTIMER1_BASE;
+	    //timerIntA=INT_TIMER1A;
+	    //timerIntB=INT_TIMER1B;
+	    break;
+
+	  case 2:
+	    pwmTimerClkEnable=SYS_CTRL_PERIPH_GPT2;
+	    pwmTimerBase=GPTIMER2_BASE;
+	   // timerIntA=INT_TIMER2A;
+	   // timerIntB=INT_TIMER2B;
+	    break;
+
+	  case 3:
+	    pwmTimerClkEnable=SYS_CTRL_PERIPH_GPT3;
+	    pwmTimerBase=GPTIMER3_BASE;
+	   // timerIntA=INT_TIMER3A;
+	   // timerIntB=INT_TIMER3B;
+	    break;
+
+
+	  }
+
+
+	  SysCtrlPeripheralEnable(pwmTimerClkEnable); //enables timer module
+
+	  TimerConfigure(pwmTimerBase, GPTIMER_CFG_SPLIT_PAIR |GPTIMER_CFG_A_PWM | GPTIMER_CFG_B_PWM); //configures timers as pwm timers
+	  TimerPrescaleSet(pwmTimerBase,GPTIMER_A,pre_cnt);		//load upper 8 bits of timer count
+	  TimerLoadSet(pwmTimerBase,GPTIMER_A,timer_cnt); 	//load lower 16 bits of timer count
+
+	  TimerControlLevel(pwmTimerBase,GPTIMER_A,true); //active high pwm
+
+	  TimerPrescaleSet(pwmTimerBase,GPTIMER_B,pre_cnt);		//load upper 8 bits of timer count
+	  TimerLoadSet(pwmTimerBase,GPTIMER_B,timer_cnt); 	//load lower 16 bits of timer count
+
+	  TimerControlLevel(pwmTimerBase,GPTIMER_B,true); //active high pwm
+
+
+	  IOCPinConfigPeriphOutput(GPIO_D_BASE,GPIO_PIN_1,IOC_MUX_OUT_SEL_GPT3_ICP1); //maps pwm1 output to pin1
+	  IOCPinConfigPeriphOutput(GPIO_D_BASE,GPIO_PIN_2,IOC_MUX_OUT_SEL_GPT3_ICP2);
+
+	  //set match registers to determine pulse width
+	  TimerMatchSet(pwmTimerBase,GPTIMER_A,match_lower);
+	  TimerPrescaleMatchSet(pwmTimerBase,GPTIMER_A,match_upper);
+
+	  TimerEnable(pwmTimerBase,GPTIMER_A);
+
+	  TimerMatchSet(pwmTimerBase,GPTIMER_B,match_lower);
+	  TimerPrescaleMatchSet(pwmTimerBase,GPTIMER_B,match_upper);
+
+	  TimerEnable(pwmTimerBase,GPTIMER_B);
+
+	  GPIOPinTypeTimer(GPIO_D_BASE,GPIO_PIN_1); //enables hw muxing of pin outputs
+
+	    IOCPadConfigSet(GPIO_D_BASE,GPIO_PIN_1,IOC_OVERRIDE_OE|IOC_OVERRIDE_PUE); // enables pins as outputs, necessary for this code to work correctly
+
+		  GPIOPinTypeTimer(GPIO_D_BASE,GPIO_PIN_2); //enables hw muxing of pin outputs
+		    IOCPadConfigSet(GPIO_D_BASE,GPIO_PIN_2,IOC_OVERRIDE_OE|IOC_OVERRIDE_PUE); // enables pins as outputs, necessary for this code to work correctly
+
+		    ///////
+   //board_init();
+   inchwormInit(setup);
+   inchwormFreerun(iw1);
+   while(1){
+   inchwormFreerun(iw1);
+   for(int i=0;i<1000000;i++){}
+   inchwormRelease(iw1);
+   for(int i=0;i<1000000;i++){}
    }
-   scheduler_start();
-   return 0; // this line should never be reached
+
 }
 
-void macpong_initSend(opentimers_id_t id) {
-    bool timeToSend = FALSE;
-    macpong_vars.macpongCounter = (macpong_vars.macpongCounter+1)%5;
-    switch (macpong_vars.macpongCounter) {
-        case 0:
-            timeToSend = TRUE;
-            break;
-        default:
-            break;
-   }
-   opentimers_scheduleIn(
-        macpong_vars.timerId, // id
-        1000,                 // duration
-        TIME_MS,              // time_type
-        TIMER_ONESHOT,        // timer_type
-        macpong_initSend      // callback
-   );
-  
-  
-   if (idmanager_getIsDAGroot()==TRUE) {
-      return;
-   }
-   if (ieee154e_isSynch()==TRUE && neighbors_getNumNeighbors()==1) {
-      if (timeToSend){
-          // send packet
-           macpong_send(0);   
-          // cancel timer
-          opentimers_cancel(macpong_vars.timerId);
-      }
-   }
-}
-
-void macpong_send(uint8_t payloadCtr) {
-   OpenQueueEntry_t* pkt;
-   uint8_t i;
-   
-   pkt = openqueue_getFreePacketBuffer(COMPONENT_UECHO);
-   if (pkt==NULL) {
-      openserial_printError(
-         COMPONENT_IPHC,
-         ERR_NO_FREE_PACKET_BUFFER,
-         (errorparameter_t)0,
-         (errorparameter_t)0
-      );
-      return;
-   }
-   pkt->creator                   = COMPONENT_IPHC;
-   pkt->owner                     = COMPONENT_IPHC;
-   
-   neighbors_getNeighborEui64(&pkt->l2_nextORpreviousHop,ADDR_64B,0);
-   packetfunctions_reserveHeaderSize(pkt,LEN_PAYLOAD);
-   ((uint8_t*)pkt->payload)[0]    = payloadCtr;
-   for (i=1;i<LEN_PAYLOAD;i++){
-     ((uint8_t*)pkt->payload)[i]  = i;
-   }
-   sixtop_send(pkt);
-}
-
-//=========================== stubbing ========================================
-
-//===== IPHC
-
-void iphc_init(void) {
-    PORT_TIMER_WIDTH       reference;
-    reference            = opentimers_getValue();
-    macpong_vars.timerId = opentimers_create();
-    opentimers_scheduleAbsolute(
-        macpong_vars.timerId,  // timerId
-        1000,                  // duration
-        reference,             // reference
-        TIME_MS,               // timetype
-        macpong_initSend       // callback
-    );
-}
-
-void iphc_sendDone(OpenQueueEntry_t* msg, owerror_t error) {
-   msg->owner = COMPONENT_IPHC;
-   openqueue_freePacketBuffer(msg);
-}
-
-void iphc_receive(OpenQueueEntry_t* msg) {
-   msg->owner = COMPONENT_IPHC;
-   macpong_send(++msg->payload[0]);
-   openqueue_freePacketBuffer(msg);
-}
-
-//===== sniffer
-
-void sniffer_setListeningChannel(uint8_t channel)       { return; }
-
-//===== L3
-
-void forwarding_init(void)                              { return; }
-void openbridge_init(void)                              { return; }
-void openbridge_triggerData(void)                       { return; }
-
-//===== L4
-
-void icmpv6_init(void)                                               { return; }
-void icmpv6echo_init(void)                                           { return; }
-void icmpv6echo_trigger(void)                                        { return; }
-void icmpv6router_init(void)                                         { return; }
-void icmpv6router_trigger(void)                                      { return; }
-void icmpv6rpl_init(void)                                            { return; }
-void icmpv6rpl_trigger(void)                                         { return; }
-void icmpv6rpl_writeDODAGid(uint8_t* dodagid)                        { return; }
-void icmpv6rpl_setDIOPeriod(uint16_t dioPeriod)                      { return; }
-void icmpv6rpl_setDAOPeriod(uint16_t daoPeriod)                      { return; }
-bool icmpv6rpl_getPreferredParentIndex(uint8_t* indexptr)            { 
-    return FALSE; 
-}
-bool icmpv6rpl_getPreferredParentEui64(open_addr_t* addressToWrite)  { 
-    return FALSE; 
-}
-bool icmpv6rpl_isPreferredParent(open_addr_t* address)               { 
-    return FALSE; 
-}
-dagrank_t icmpv6rpl_getMyDAGrank(void)                               { 
-    return 0; 
-}
-bool icmpv6rpl_daoSent(void) {
-    return TRUE;
-}
-void icmpv6rpl_setMyDAGrank(dagrank_t rank)                          { return; }
-void icmpv6rpl_killPreferredParent(void)                             { return; }
-void icmpv6rpl_updateMyDAGrankAndParentSelection(void)               { return; }
-void icmpv6rpl_indicateRxDIO(OpenQueueEntry_t* msg)                  { return; }
-void icmpv6echo_setIsReplyEnabled(bool isEnabled)                    { return; }
-
-
-
-void opentcp_init(void)                                 { return; }
-void openudp_init(void)                                 { return; }
-void opencoap_init(void)                                { return; }
-
-//===== L7
-
-void openapps_init(void)                                { return; }
-void ohlone_init(void)                                  { return; }
-void tcpecho_init(void)                                 { return; }
-void tcpinject_init(void)                               { return; }
-void tcpinject_trigger(void)                            { return; }
-void tcpprint_init(void)                                { return; }
-void c6t_init(void)                                     { return; }
-void cinfo_init(void)                                   { return; }
-void cleds__init(void)                                  { return; }
-void cwellknown_init(void)                              { return; }
-   // TCP
-void techo_init(void)                                   { return; }
-   // UDP
-void uecho_init(void)                                   { return; }
 

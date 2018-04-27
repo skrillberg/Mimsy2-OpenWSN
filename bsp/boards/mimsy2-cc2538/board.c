@@ -73,14 +73,14 @@ void board_init(void) {
    
    gpio_init();
    clock_init();
-   board_timer_init();
-   leds_init();
-   debugpins_init();
+   //board_timer_init(); changed for inchwrom code
+   //leds_init(); changed for incworm code
+   //debugpins_init(); changed for inchworm code
    //button_init();
-   sctimer_init();
-   uart_init();
-   radio_init();
-   i2c_init();
+   //sctimer_init(); changed for inchworm code
+   //uart_init(); changed for inchwrom code
+   //radio_init(); changed for incwhorm code
+   //i2c_init(); changed for inchworm code
   // sensors_init();
   // cryptoengine_init();
 }

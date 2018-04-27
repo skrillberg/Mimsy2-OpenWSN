@@ -18,7 +18,7 @@
 #include "headers/hw_memmap.h"
 #include "ioc.h"
 #include "led_mimsy.h"
-
+#include "inchworm.h"
 //IMUData data;
 
 //long vec[3];
@@ -193,6 +193,21 @@ float i_coeff;
 float ts;
 
 unsigned long last_timestamp;
+
+InchwormMotor iw1={GPIO_D_BASE,GPIO_D_BASE,GPIO_PIN_1,GPIO_PIN_2,1};
+InchwormMotor iws[1]={iw1};
+InchwormSetup setup={iws,1,3000,70,3,1};
+
+
+inchwormInit(setup);
+inchwormFreerun(iw1);
+while(1){
+inchwormFreerun(iw1);
+for(int i=0;i<1000000;i++){}
+//inchwormRelease(iw1);
+for(int i=0;i<10000;i++){}
+}
+
    while(1){
 	   	 //  mimsyPrintf("\n begin while");
 	   	  last_timestamp = timestamp2;
@@ -217,7 +232,7 @@ unsigned long last_timestamp;
 
 	   cnt++;
 	  // if(cnt%10==0){
-		      //mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],gyro[0],gyro[1],gyro[2]);
+		     // mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],gyro[0],gyro[1],gyro[2],(int)(timestamp2));
 
 		   	   //pitch = 2*(quat[0]*quat[2]-quat[3]*quat[1]);
 		       //mimsyPrintf("\n Orientation Vector: \%011d, \%011d, \%011d, ",xrot[0],xrot[1],xrot[2]);
@@ -331,7 +346,7 @@ unsigned long last_timestamp;
 				  // servo_time_0=1.45+yaw_control/DEG_PER_MS;
 				   //servo_time_1=1.45+yaw_control/DEG_PER_MS;
 
-				   mimsyPrintf("\n Pitch: %d, Roll: %d, pitch_sum: %d, pitch_output: %d, ts: %d ", (int)(pitch*100), (int)(yaw*100),(int)(pitch_sum*100),(int)(pitch_control*100),(int)(ts*1000000));
+				   //mimsyPrintf("\n Pitch: %d, Roll: %d, yaw: %d, pitch_sum: %d, pitch_output: %d, ts: %d ", (int)(pitch*100), (int)(yaw*100),(int)(roll*100),(int)(pitch_sum*100),(int)(pitch_control*100),(int)(ts*1000000));
 			   }
 
 

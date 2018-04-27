@@ -95,13 +95,13 @@ PhaseTimerAIntHandler(void)
 void inchwormInit(struct InchwormSetup setup){
   uint32_t freqCnt=SysCtrlClockGet()/setup.motorFrequency;
   uint32_t match=(100-setup.dutyCycle)*SysCtrlClockGet()/setup.motorFrequency/100 ;
-  uint32_t pwmTimerClkEnable;
-  uint32_t pwmTimerBase;
-  uint32_t phaseTimerBase;
-  uint32_t phaseTimerClkEnable;
-  uint32_t x;
-  uint32_t ui32Loop;
-  uint32_t phaseIntA;
+  uint32_t pwmTimerClkEnable=5;
+  uint32_t pwmTimerBase=5;
+  uint32_t phaseTimerBase=5;
+  uint32_t phaseTimerClkEnable=5;
+  uint32_t x=5;
+  uint32_t ui32Loop=5;
+  uint32_t phaseIntA=5;
   //setup active motors list
   motorsNum=setup.numOfMotors;
   
@@ -206,8 +206,8 @@ void inchwormInit(struct InchwormSetup setup){
     
     for(uint8_t i=0;i<setup.numOfMotors;i++){
   
-    IOCPinConfigPeriphOutput(setup.iwMotors[i].GPIObase1,setup.iwMotors[i].GPIOpin1,IOC_MUX_OUT_SEL_GPT1_ICP1); //maps pwm1 output to pin1
-    IOCPinConfigPeriphOutput(setup.iwMotors[i].GPIObase2,setup.iwMotors[i].GPIOpin2,IOC_MUX_OUT_SEL_GPT1_ICP2); //maps pwm2 output to pin2
+    IOCPinConfigPeriphOutput(setup.iwMotors[i].GPIObase1,setup.iwMotors[i].GPIOpin1,IOC_MUX_OUT_SEL_GPT3_ICP1); //maps pwm1 output to pin1
+    IOCPinConfigPeriphOutput(setup.iwMotors[i].GPIObase2,setup.iwMotors[i].GPIOpin2,IOC_MUX_OUT_SEL_GPT3_ICP2); //maps pwm2 output to pin2
     }
     
     //set pwm polarities 

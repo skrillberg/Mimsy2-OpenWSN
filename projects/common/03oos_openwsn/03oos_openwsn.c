@@ -41,6 +41,7 @@ void alt_inv_q_norm4(float *q);
 float quat_dot_product(float *quat,float *vec);
 static void printFlash(IMUDataCard * cards_stable, int page_struct_capacity);
 int mote_main(void) {
+<<<<<<< HEAD
 	//mimsyLedSet(GREEN_LED);
 	//for(int i = 0; i<10000; i++){
 
@@ -537,3 +538,15 @@ static void printFlash(IMUDataCard * cards_stable, int page_struct_capacity){
 
 
 
+=======
+
+    // initialize
+    board_init();
+    scheduler_init();
+    openstack_init();
+
+    // start
+    scheduler_start();
+    return 0; // this line should never be reached
+}
+>>>>>>> 49792773e76504ff131d1ac7add0c15fc1e40378

@@ -193,7 +193,7 @@ float i_coeff;
 float ts;
 
 unsigned long last_timestamp;
-
+/*
 InchwormMotor iw1={GPIO_D_BASE,GPIO_D_BASE,GPIO_PIN_1,GPIO_PIN_2,1};
 InchwormMotor iws[1]={iw1};
 InchwormSetup setup={iws,1,3000,70,3,1};
@@ -206,7 +206,7 @@ inchwormFreerun(iw1);
 for(int i=0;i<1000000;i++){}
 //inchwormRelease(iw1);
 for(int i=0;i<10000;i++){}
-}
+}*/
 
    while(1){
 	   	 //  mimsyPrintf("\n begin while");
@@ -334,17 +334,17 @@ for(int i=0;i<10000;i++){}
 			   //yaw loop (roll for when rocket is pointing up)
 			   if(ts!=0){
 				   yaw_sum += (yaw_ref-yaw)*ts;
-				   yaw_control = p_coeff*.25 * (yaw_ref - yaw) + i_coeff * yaw_sum + d_coeff /ts * ((yaw_ref -yaw) - (yaw_ref_last -yaw_last ) );
-				   //  servo_time_0=1.45+yaw_control*DEG_PER_MS;
-				   //  servo_time_1=1.45-yaw_control*DEG_PER_MS;
+				   yaw_control = p_coeff*.2 * (yaw_ref - yaw) + i_coeff * yaw_sum + d_coeff /ts * ((yaw_ref -yaw) - (yaw_ref_last -yaw_last ) );
+				   //servo_time_0=1.45+yaw_control*DEG_PER_MS;
+				   //servo_time_1=1.45-yaw_control*DEG_PER_MS;
 				   //pitch loop (roll for when rocket is pointing up)
 				   pitch_sum += (pitch_ref-pitch)*ts;
 				   pitch_control = p_coeff * (pitch_ref - pitch) + i_coeff * pitch_sum + d_coeff /ts * ((pitch_ref -pitch) - (pitch_ref_last -pitch_last ) );
 				   servo_time_0=1.45-pitch_control/DEG_PER_MS;
 				   servo_time_1=1.45+pitch_control/DEG_PER_MS;
 
-				  // servo_time_0=1.45+yaw_control/DEG_PER_MS;
-				   //servo_time_1=1.45+yaw_control/DEG_PER_MS;
+				   servo_time_0=1.45+yaw_control/DEG_PER_MS;
+				   servo_time_1=1.45+yaw_control/DEG_PER_MS;
 
 				   //mimsyPrintf("\n Pitch: %d, Roll: %d, yaw: %d, pitch_sum: %d, pitch_output: %d, ts: %d ", (int)(pitch*100), (int)(yaw*100),(int)(roll*100),(int)(pitch_sum*100),(int)(pitch_control*100),(int)(ts*1000000));
 			   }
@@ -372,17 +372,17 @@ for(int i=0;i<10000;i++){}
 		   }
 		//   servo_time_0 = servo_time_0 + q2_err/500/2 * rollbias;
 		 //  servo_time_1 = servo_time_1 +q2_err/500/2 * rollbias;
-		   if(servo_time_0<1.0){
-			   servo_time_0=1.0;
+		   if(servo_time_0<1.1){
+			   servo_time_0=1.1;
 		   }
-		   if(servo_time_0>1.87){
-			   servo_time_0=1.87;
+		   if(servo_time_0>1.77){
+			   servo_time_0=1.77;
 		   }
 		   if(servo_time_1<1.0){
-			   servo_time_1=1.0;
+			   servo_time_1=1.1;
 		   }
-		   if(servo_time_1>1.87){
-			   servo_time_1=1.87;
+		   if(servo_time_1>1.77){
+			   servo_time_1=1.77;
 		   }
 
 		   servo_rotate_time(servo_time_0,0);

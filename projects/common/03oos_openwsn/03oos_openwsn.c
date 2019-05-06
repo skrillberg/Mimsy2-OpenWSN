@@ -193,20 +193,33 @@ float i_coeff;
 float ts;
 
 unsigned long last_timestamp;
-/*
+
 InchwormMotor iw1={GPIO_D_BASE,GPIO_D_BASE,GPIO_PIN_1,GPIO_PIN_2,1};
 InchwormMotor iws[1]={iw1};
-InchwormSetup setup={iws,1,3000,70,3,1};
+InchwormSetup setup={iws,1,300,70,3,1};
 
 
 inchwormInit(setup);
-inchwormFreerun(iw1);
-while(1){
-inchwormFreerun(iw1);
-for(int i=0;i<1000000;i++){}
+//inchwormFreerun(iw1);
+//while(1){
+//inchwormFreerun(iw1);
+//for(int i=0;i<1000000;i++){}
 //inchwormRelease(iw1);
-for(int i=0;i<10000;i++){}
-}*/
+//for(int i=0;i<10000;i++){}
+//}
+
+while(1) {
+	inchwormFreerun(iw1);
+	for(int i= 0; i < 1000000; i++) {
+		inchwormDriveToPosition(iw1, i);
+		for(int j = 0; j< 1000; j++) {
+			inchwormHold(iw1);
+		}
+		inchwormRelease(iw1);
+		for(int k = 0; k< 1000; k++) {}
+	}
+	inchwormFreerun(iw1);
+}
 
    while(1){
 	   	 //  mimsyPrintf("\n begin while");

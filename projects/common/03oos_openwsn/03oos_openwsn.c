@@ -212,13 +212,10 @@ while(1) {
 	inchwormFreerun(iw1);
 	for(int i= 0; i < 1000000; i++) {
 		inchwormDriveToPosition(iw1, i);
-		for(int j = 0; j< 1000; j++) {
-			inchwormHold(iw1);
-		}
 		inchwormRelease(iw1);
-		for(int k = 0; k< 1000; k++) {}
+		inchwormFreerun(iw1);
 	}
-	inchwormFreerun(iw1);
+
 }
 
    while(1){

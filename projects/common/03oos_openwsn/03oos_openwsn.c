@@ -22,7 +22,7 @@
 //IMUData data;
 
 //long vec[3];
-#define G_THRESH  		2
+#define G_THRESH  		1.2
 #define FLASH_PAGE_STORAGE_START              120
 #define FLASH_PAGES_TOUSE                       100
 #define PAGE_SIZE                2048
@@ -134,13 +134,14 @@ int mote_main(void) {
 	 stopLogging = false;
 	 triggered=false;
 
-   servo_init(3,20,1.45);
+   //servo_init(3,20,1.45);
 
    mpu_set_sensors(INV_XYZ_ACCEL|INV_XYZ_GYRO); //turn on sensor
    mpu_set_accel_fsr(16); //set fsr for accel
    mpu_set_gyro_fsr(gyro_fsr); //set fsr for accel
+   mpu_set_lpf(42); //42 hz filter
 
-   mimsyDmpBegin();
+   //mimsyDmpBegin();
 
 
 
@@ -193,27 +194,29 @@ float i_coeff;
 float ts;
 
 unsigned long last_timestamp;
-/*
+
 InchwormMotor iw1={GPIO_D_BASE,GPIO_D_BASE,GPIO_PIN_1,GPIO_PIN_2,1};
 InchwormMotor iws[1]={iw1};
 InchwormSetup setup={iws,1,3000,70,3,1};
 
-
 inchwormInit(setup);
 inchwormFreerun(iw1);
-while(1){
+//while(1){
 inchwormFreerun(iw1);
-for(int i=0;i<1000000;i++){}
+//for(int i=0;i<1000000;i++){}
 //inchwormRelease(iw1);
-for(int i=0;i<10000;i++){}
-}*/
+//for(int i=0;i<10000;i++){}
+//}
 
    while(1){
 	   	 //  mimsyPrintf("\n begin while");
 	   	  last_timestamp = timestamp2;
 	   //always runs regardless of logging
-	      dmp_read_fifo(gyro, accel, quat,&timestamp2, &sensors, &more);
+	      //dmp_read_fifo(gyro, accel, quat,&timestamp2, &sensors, &more);
 	    //  mimsyPrintf("\n DMP read done");
+            //read imu directly 
+            mimsyIMURead6Dof(&datapoint);
+            /*
 	      datapoint.signedfields.accelX = accel[0];
 		  datapoint.signedfields.accelY = accel[1];
 		  datapoint.signedfields.accelZ = accel[2];
@@ -226,7 +229,7 @@ for(int i=0;i<10000;i++){}
 
 		  timeDelta = startTimestamp - (uint32_t) timestamp2;
 		  ts = (float)(timestamp2-last_timestamp) * 0.001;
-
+        */
 
 
 

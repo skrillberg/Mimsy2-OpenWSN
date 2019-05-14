@@ -230,7 +230,8 @@ void inchwormInit(struct InchwormSetup setup){
     //
      SysCtrlPeripheralEnable(phaseTimerClkEnable); 
      TimerConfigure(phaseTimerBase,GPTIMER_CFG_ONE_SHOT); //configures one shot timer for phase offset
-     TimerLoadSet(phaseTimerBase,GPTIMER_A,freqCnt/2);//offset timer
+     x = freqCnt/2; //phase timer count
+     TimerLoadSet(phaseTimerBase,GPTIMER_A,x);//offset timer
    //  TimerIntRegister(phaseTimerBase, GPTIMER_A, PhaseTimerAIntHandler);
    //  TimerIntClear(phaseTimerBase, GPTIMER_TIMA_TIMEOUT|GPTIMER_TIMB_TIMEOUT);
    //  TimerIntEnable(phaseTimerBase, GPTIMER_TIMA_TIMEOUT);
@@ -259,9 +260,10 @@ void inchwormInit(struct InchwormSetup setup){
     TimerEnable(phaseTimerBase,GPTIMER_A);
    
     //wait for offest timer to expire and throw interrupt
-    while(TimerValueGet(phaseTimerBase,GPTIMER_A)>10 &&TimerValueGet(phaseTimerBase,GPTIMER_A)!=freqCnt/2){
-      
+    while(TimerValueGet(phaseTimerBase,GPTIMER_A)>10 &&TimerValueGet(phaseTimerBase,GPTIMER_A)!=x){
+      x = TimerValueGet(phaseTimerBase,GPTIMER_A);
     }
+
     TimerEnable(pwmTimerBase,GPTIMER_A);
    
    

@@ -196,10 +196,13 @@ unsigned long last_timestamp;
 
 InchwormMotor iw1={GPIO_D_BASE,GPIO_D_BASE,GPIO_PIN_1,GPIO_PIN_2,1};
 InchwormMotor iws[1]={iw1};
-InchwormSetup setup={iws,1,300,70,3,1};
+InchwormSetup setup={iws,1,1000,70,3,1};
 
 
 inchwormInit(setup);
+
+int inchworm_running;
+inchworm_running = 0;
 //inchwormFreerun(iw1);
 //while(1){
 //inchwormFreerun(iw1);
@@ -207,18 +210,25 @@ inchwormInit(setup);
 //inchwormRelease(iw1);
 //for(int i=0;i<10000;i++){}
 //}
-
+/*
 while(1) {
 	inchwormFreerun(iw1);
-	for(int i= 0; i < 1000000; i++) {
-		inchwormDriveToPosition(iw1, i);
-		inchwormRelease(iw1);
-		inchwormFreerun(iw1);
+	for(int i= 0; i < 100000; i++) {
+		//inchwormDriveToPosition(iw1, i);
+		//inchwormRelease(iw1);
+		//inchwormFreerun(iw1);
 	}
-
+	inchwormRelease(iw1);
+	for(int i= 0; i < 100000; i++) {
+		//inchwormDriveToPosition(iw1, i);
+		//inchwormRelease(iw1);
+		//inchwormFreerun(iw1);
+	}
 }
-
+*/
    while(1){
+	   	  ///logging data///////////////////////////////////////////////////////////////////////////////
+
 	   	 //  mimsyPrintf("\n begin while");
 	   	  last_timestamp = timestamp2;
 	   //always runs regardless of logging
@@ -231,179 +241,25 @@ while(1) {
 		  datapoint.signedfields.gyroY = gyro[1];
 		  datapoint.signedfields.gyroZ = gyro[2];
 		  datapoint.fields.timestamp=(uint32_t)timestamp2;
-		  datapoint.fields.servo_state_0 = servo_time_0;
-		  datapoint.fields.servo_state_1 = servo_time_1;
+		  datapoint.fields.servo_state_0 = inchworm_running;
+		  datapoint.fields.servo_state_1 = inchworm_running;
 
 		  timeDelta = startTimestamp - (uint32_t) timestamp2;
 		  ts = (float)(timestamp2-last_timestamp) * 0.001;
 
+		  //move inchworm motors//////////////////////////////////////////////////////////////////////
+		  if (!inchworm_running && (cnt % 500 == 0)){
+			  inchwormFreerun(iw1);
+			  inchworm_running = 1;
+		  }
+		  else if (inchworm_running && (cnt % 500 == 0)){
+			  inchwormRelease(iw1);
+			  inchworm_running = 0;
+		  }
 
-
-
+		  //update count////////////////////////////////////////////////////////////////////////////////////
 	   cnt++;
-	  // if(cnt%10==0){
-		     // mimsyPrintf("\n Quaternions:%d,%d,%d,%d,%d,%d,%d,%d",quat[0],quat[1],quat[2],quat[3],gyro[0],gyro[1],gyro[2],(int)(timestamp2));
 
-		   	   //pitch = 2*(quat[0]*quat[2]-quat[3]*quat[1]);
-		       //mimsyPrintf("\n Orientation Vector: \%011d, \%011d, \%011d, ",xrot[0],xrot[1],xrot[2]);
-		   	 // mimsyPrintf("\n pitch: \%05d, yaw: \%05d,\%012d,\%012d,\%012d",(int)(servo_time_0*100),(int)(servo_time_1*100),gyro[0],gyro[1],gyro[2]);
-	 //  }
-	  // if(cnt%1==0){
-		   	 // alt_inv_q_rotate(quat,xvec,xrot);
-		      //xfloat[0]=(float)xrot[0]/(float)0x40000000;
-		      //xfloat[1]=(float)xrot[1]/(float)0x40000000;
-		      //xfloat[2]=(float)xrot[2]/(float)0x40000000;
-		      //xrot is the direction in global coordinates of where the x body axis is pointing
-
-		   //mag = fvec[0]*fvec[0]+fvec[1]*fvec[1];
-		   //ydif= xfloat[1]-xref[1];
-		   //zdif = xfloat[2]-xref[2];
-
-		   //pitch control
-		   fquats[0]=(float)quat[0]/(float)0x40000000;
-		   fquats[1]=(float)quat[1]/(float)0x40000000;
-		   fquats[2]=(float)quat[2]/(float)0x40000000;
-		   fquats[3]=(float)quat[3]/(float)0x40000000;
-
-		   //mag = sqrtf( fquats[1] * fquats[1] + fquats[2] * fquats[2] + fquats[3] * fquats[3]);
-		   alt_inv_q_norm4(fquats);
-		   pitch_last = pitch; //save previous state
-		   pitch = asinf( 2*(fquats[0]*fquats[2]-fquats[3]*fquats[1])); //computes sin of pitch
-
-
-
-		   //q2_err = 3.14-acosf(quat_dot_product(fquats,yref)/mag);
-		   //q1_err = quat_dot_product(fquats,zref)/mag;
-		   //q1_err = atan2f(quat_dot_product(fquats,zref),quat_dot_product(fquats,xref));
-		   //q2_err = atan2f(quat_dot_product(fquats,xref),quat_dot_product(fquats,yref));
-		   //servo_time_0 = 1.45 + q1_err/2/3.14159;
-		   //servo_time_1 = 1.45 -q1_err/2/3.14159;
-
-		   //servo_time_0 = 1.45;
-		   //servo_time_1= 1.45;
-
-		   //gyro yaw
-		   yaw_last = yaw;
-		   yaw = atan2f(2*(fquats[0] * fquats[3] + fquats[1] * fquats[2]),1 - 2*(fquats[2]*fquats[2] + fquats[3]*fquats[3]));
-
-		   //roll control
-		   roll_last = roll;
-		   roll =  atan2f(2 * (fquats[0]*fquats[1] + fquats[2] * fquats[3]) ,(1 -2*(fquats[1] * fquats[1] +fquats[2]*fquats[2])));
-		   if(!LOGGING &&(cnt%50 ==0)){
-
-			 // mimsyPrintf("\n Pitch: %d, Roll: %d", (int)(pitch*100), (int)(yaw*100) );
-		   }
-		   // gyro 1 is body axis roll for rocket
-	//	   q2_err = (float) (((float)(gyro[2]*2000))/32780);
-
-		   //roll for when rocket is pointing up
-		   /*
-		   servo_time_0 = servo_time_0 + (yaw)/3.14/2 * rollbias;
-		   servo_time_1 = servo_time_1 +(yaw)/3.14/2 * rollbias;
-		   */
-
-
-		   //servo control section////////////////////////////////////////////////////////
-		   if(SIMPLE_SINE){
-			   if(timeDelta <0.2*1000){
-				   //roll for when rocket is pointing up, because roll is actually yaw
-				   /*
-				   servo_time_0 = servo_time_0 + (yaw)/3.14/2 * rollbias;
-				   servo_time_1 = servo_time_1 +(yaw)/3.14/2 * rollbias;
-				   */
-				   servo_time_0 = servo_time_0 + (roll)/3.14/2 * rollbias;
-				   servo_time_1 = servo_time_1 +(roll)/3.14/2 * rollbias;
-
-				   servo_time_0 = 1.45+(pitch-sinf(3.145*(float)(cnt-2500)/30000))/3.14/2 * pitchbias;
-				   servo_time_1= 1.45-(pitch-sinf(3.145*(float)(cnt-2500)/30000))/3.14/2 * pitchbias;
-			   }
-			   else if(timeDelta >=0.2*1000 && timeDelta < 0.7 * 1000){
-
-			   }
-		   }
-
-
-		   else if(PID){
-
-			   if(timeDelta <0.3*1000){
-				   yaw_ref = 0;
-				   pitch_ref = 0;
-			   }
-			   if(timeDelta <= 0.3*1000 && timeDelta < 0.7*1000){
-				   yaw_ref = 0;
-				   pitch_ref = 0.5;
-			   }
-			   if(timeDelta <=0.7*1000){
-				   yaw_ref = 0;
-				   pitch_ref = 0;
-			   }
-
-			   p_coeff = 71*0.05;
-			   i_coeff = 145.9*0.001*0;
-			   d_coeff = 8.5*0.001*0;
-			   //yaw loop (roll for when rocket is pointing up)
-			   if(ts!=0){
-				   yaw_sum += (yaw_ref-yaw)*ts;
-				   yaw_control = p_coeff*.2 * (yaw_ref - yaw) + i_coeff * yaw_sum + d_coeff /ts * ((yaw_ref -yaw) - (yaw_ref_last -yaw_last ) );
-				   //servo_time_0=1.45+yaw_control*DEG_PER_MS;
-				   //servo_time_1=1.45-yaw_control*DEG_PER_MS;
-				   //pitch loop (roll for when rocket is pointing up)
-				   pitch_sum += (pitch_ref-pitch)*ts;
-				   pitch_control = p_coeff * (pitch_ref - pitch) + i_coeff * pitch_sum + d_coeff /ts * ((pitch_ref -pitch) - (pitch_ref_last -pitch_last ) );
-				   servo_time_0=1.45-pitch_control/DEG_PER_MS;
-				   servo_time_1=1.45+pitch_control/DEG_PER_MS;
-
-				   servo_time_0=1.45+yaw_control/DEG_PER_MS;
-				   servo_time_1=1.45+yaw_control/DEG_PER_MS;
-
-				   //mimsyPrintf("\n Pitch: %d, Roll: %d, yaw: %d, pitch_sum: %d, pitch_output: %d, ts: %d ", (int)(pitch*100), (int)(yaw*100),(int)(roll*100),(int)(pitch_sum*100),(int)(pitch_control*100),(int)(ts*1000000));
-			   }
-
-
-			   }
-		   else if(ANGLE_TEST){
-			   servo_time_0 = 1.87;
-		   	   servo_time_1 = 0;
-		   }
-		   else{
-			   if(cnt<=2500){
-				   servo_time_0 = 1.45+(-.25+pitch+(float)(cnt)/10000) * pitchbias;
-				   servo_time_1= 1.45-(-.25+pitch+(float)(cnt)/10000) * pitchbias;
-
-				   servo_time_0 = servo_time_0 + (roll)/3.14/2 * rollbias;
-				   servo_time_1 = servo_time_1 +(roll)/3.14/2 * rollbias;
-			   }
-			   else{
-				   servo_time_0 = 1.45+(0.25+pitch-(float)(cnt)/10000) * pitchbias;
-				   servo_time_1= 1.45-(0.25+pitch-(float)(cnt)/10000) * pitchbias;
-				   servo_time_0 = servo_time_0 + (roll)/3.14/2 * rollbias;
-				   servo_time_1 = servo_time_1 +(roll)/3.14/2 * rollbias;
-			   }
-		   }
-		//   servo_time_0 = servo_time_0 + q2_err/500/2 * rollbias;
-		 //  servo_time_1 = servo_time_1 +q2_err/500/2 * rollbias;
-		   if(servo_time_0<1.1){
-			   servo_time_0=1.1;
-		   }
-		   if(servo_time_0>1.77){
-			   servo_time_0=1.77;
-		   }
-		   if(servo_time_1<1.0){
-			   servo_time_1=1.1;
-		   }
-		   if(servo_time_1>1.77){
-			   servo_time_1=1.77;
-		   }
-
-		   servo_rotate_time(servo_time_0,0);
-		   servo_rotate_time(servo_time_1,1);
-		//   mimsyPrintf("\n servo position updated");
-
-	  // }
-	   if(cnt==5000){
-		   cnt=0;
-		   //servo_rotate_time(2);
-	   }
 
 	   //begin logging fsm/////////////////////////////////////////////////////////////////
 	      // if logging mode is off, mimsy will loop a serial output of the data; it should also do this if it isn't armed
@@ -417,9 +273,9 @@ while(1) {
 				   if ((GPIOPinRead(GPIO_A_BASE,GPIO_PIN_5) == 0) ){
 					   armed = 1;
 					   mimsyLedSet(GREEN_LED);
+				   }else{
+					   printFlash(cards_stable,page_struct_capacity);
 				   }
-		    	   printFlash(cards_stable,page_struct_capacity);
-
 				}
 	      //if logging is over
 	      else if(stopLogging ){

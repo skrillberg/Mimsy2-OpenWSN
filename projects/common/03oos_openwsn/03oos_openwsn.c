@@ -27,7 +27,7 @@
 #define FLASH_PAGES_TOUSE                       100
 #define PAGE_SIZE                2048
 #define DATAPOINTS  4
-#define LOGGING  true
+#define LOGGING  false
 #define ANGLE_TEST false
 //SIMPLE_SINE, ROLL_SINE
 #define SIMPLE_SINE false
@@ -201,6 +201,10 @@ InchwormSetup setup={iws,1,1000,70,3,1};
 
 inchwormInit(setup);
 
+GPIOPinTypeGPIOOutput(GPIO_D_BASE,GPIO_PIN_0);
+GPIOPinWrite(GPIO_D_BASE,GPIO_PIN_0,0);
+
+
 int inchworm_running;
 inchworm_running = 0;
 //inchwormFreerun(iw1);
@@ -248,11 +252,11 @@ while(1) {
 		  ts = (float)(timestamp2-last_timestamp) * 0.001;
 
 		  //move inchworm motors//////////////////////////////////////////////////////////////////////
-		  if (!inchworm_running && (cnt % 500 == 0)){
+		  if (!inchworm_running && (cnt % 20000 == 0)){
 			  inchwormFreerun(iw1);
 			  inchworm_running = 1;
 		  }
-		  else if (inchworm_running && (cnt % 500 == 0)){
+		  else if (inchworm_running && (cnt % 20000 == 0)){
 			  inchwormRelease(iw1);
 			  inchworm_running = 0;
 		  }
